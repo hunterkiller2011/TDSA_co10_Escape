@@ -229,6 +229,13 @@ _playerGroup = [] call A3E_fnc_GetPlayerGroup;
 
 	//Spawn crash sites
 	[] call A3E_fnc_createCrashSites;
+	
+	//Spawn helicopter capture objective
+	// private _worldName = toLower worldName;
+	// if (_worldName in ["altis", "enoch"]) then {
+	// 	[] call A3E_fnc_createHeliCapture;
+	// };
+	[] call A3E_fnc_createHeliCapture;
 };
 
 
@@ -366,6 +373,7 @@ if(false) then {
 		{
 			_vehiclesPerSqkm = 1.2;
 		};
+		_vehiclesPerSqkm = 1;
 	};
 
 	_radius = _enemySpawnDistance + 500;

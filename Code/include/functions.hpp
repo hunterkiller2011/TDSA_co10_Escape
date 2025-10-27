@@ -137,6 +137,7 @@ class CfgFunctions
             class createAmmoDepots {};
 			class createMortarSites {};
 			class createCrashSites {};
+			class createHeliCapture {};
 			class createLocationMarker {};
 			class UpdateLocationMarker {};
 			class createExtractionPoint {};

@@ -20,7 +20,7 @@ class Params
             values[] = {0, 1, 2, 3, 4};
             texts[] = {"Cadet", "Easy", "Normal", "Hard", "Extreme"};
 			livechanges = 1;
-            default = 1;
+            default = 2;
 	};
 	class A3E_Param_EnemyFrequency
 	{
@@ -72,7 +72,7 @@ class Params
 	    title="Time Of Day";
 		values[]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26};
 		texts[]={"00:00","01:00","02:00","03:00","04:00","05:00","06:00","07:00","08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00","Random","Daytime","Nighttime"};
-		default = 8;
+		default = 15;
 		//function = "A3E_fnc_paramDaytime"; // (Optional) Function called when player joins, selected value is passed as an argument
 	};
 	class A3E_Param_TimeMultiplier	
@@ -140,7 +140,7 @@ class Params
 		values[]={5,10,20,30,40,50};
 		texts[]={"5%","10%","20%","30%","40%","50%"};
 		livechanges = 1;
-		default = 20;
+		default = 30;
 	};
 	class A3E_Param_RevealMarkers
 	{
@@ -162,14 +162,14 @@ class Params
 		values[]={0.5,1,2};
 		texts[]={"Reduced","Default","Death in fire"};
 		livechanges = 1;
-		default = 1;
+		default = 2;
 	};
 	class A3E_Param_War_Torn
 	{
 		title="War-Torn mode (CSAT and AAF are fighting each other)";
 		values[]={0,1};
 		texts[]={"Disabled","Enabled"};
-		default = 0;
+		default = 1;
 	};
 	class A3E_Param_ReviveView
 	{
@@ -191,7 +191,7 @@ class Params
 		title="Additional Weaponbox (with less random content) at depots";
 		values[]={0,1};
 		texts[]={"Off", "On"};
-		default = 0;
+		default = 1;
 	};
 	class A3E_Param_NoNightvision
 	{
@@ -283,7 +283,7 @@ class Params
 		title="Mag repack";
 		values[]={0,1};
 		texts[]={"Disabled", "Enabled"};
-		default = 0;
+		default = 1;
 	};
 	class A3E_Param_Spacer7
     {
