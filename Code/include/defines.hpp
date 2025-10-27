@@ -1,5 +1,5 @@
 #define VERSION "{* VERSION *} TDSA"
-#define MISSIONNAME "{* MISSION_FULL *}"
+#define MISSIONNAME "{* MISSION_FULL *} TDSA"
 #define MISSIONNAMEFULL "{* MISSION_FULL *} {* ISLANDNAME *} {* MOD *} {* VERSION *}"
 #define MOD "{* MOD *}"
 #define ISLAND "{* ISLANDNAME *}"

@@ -245,3 +245,13 @@ a3e_arr_roadblocks_Inf_GUE = a3e_arr_Escape_InfantryTypes_Ind;
 
 a3e_arr_roadblocks_Veh_INS = a3e_arr_Escape_RoadBlock_MannedVehicleTypes;
 a3e_arr_roadblocks_Veh_GUE = a3e_arr_Escape_RoadBlock_MannedVehicleTypes_Ind;
+
+// Random array. Helicopters for the capture objective.
+// These should be enemy (OPFOR or Independent) helicopters.
+// Index 0: Helicopter classname
+// Index 1: Number of seats
+a3e_arr_heli_capture = [
+    ["O_Heli_Light_02_unarmed_F", 8],  // Orca (OPFOR)
+    ["I_Heli_Transport_02_F", 16], // Mohawk (AAF/Independent)
+    ["O_Heli_Transport_04_covered_F", 16] // Taru (CSAT/OPFOR)
+];
