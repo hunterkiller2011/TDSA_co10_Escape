@@ -9,6 +9,16 @@ private ["_enemyFrequency"];
 
 _enemyFrequency = _this select 0;
 
+// Random array. Helicopters for the capture objective.
+// These should be enemy (OPFOR or Independent) helicopters.
+// Index 0: Helicopter classname
+// Index 1: Number of seats
+a3e_arr_heli_capture = [
+    ["O_Heli_Light_02_unarmed_F", 8],  // Orca (OPFOR)
+    ["I_Heli_Transport_02_F", 16], // Mohawk (AAF/Independent)
+    ["O_Heli_Transport_04_covered_F", 16] // Taru (CSAT/OPFOR)
+];
+
 A3E_VAR_Side_Blufor = west;//Player side, RHS USMC-D
 A3E_VAR_Side_Opfor = east;//RHS AFRF, VDV desert
 A3E_VAR_Side_Ind = resistance;//RHS SAF, UN Peacekeepers desert
