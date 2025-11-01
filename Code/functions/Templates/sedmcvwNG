@@ -1,0 +1,38 @@
+#!/bin/bash
+
+orig1=23840.8
+orig2=18151.8
+orig3=0.4
+
+regex="_pos = \[,([0-9]*\.?[0-9]+),([0-9]*\.?[0-9]+),([0-9]*\.?[0-9]+),\];"
+regex2="_obj setVectorDirAndUp \[,\[(-?[0-9]\.?(?:[0-9]?)+e?-?0?8?,-?[0-9]\.?(?:[0-9]?)+e?-?0?8?),0\],\[0,0,1\],\]; ?"
+count=0
+while read -r line; do
+        if [[ $line =~ $regex ]]; then
+#                echo "$line"
+#                echo "${BASH_REMATCH[0]}"
+                cur1="${BASH_REMATCH[1]}"
+                cur2="${BASH_REMATCH[2]}"
+                cur3="${BASH_REMATCH[3]}"
+#                echo "$orig1 - $cur1"
+#                echo "$orig2 - $cur2"
+#                echo "$orig3 - $cur3"
+#                repl1=$(echo "$orig1 - $cur1" | bc -l)
+#                repl2=$(echo "$orig2 - $cur2" | bc -l)
+                repl1=$(echo "$cur1 - $orig1" | bc -l)
+                repl2=$(echo "$cur2 - $orig2" | bc -l)
+                repl3=0
+                echo "_pos = [_center,_center vectorAdd [$repl1,$repl2,$repl3],_rotation] call A3E_fnc_rotatePosition;" >> "fn_BuildPrison6-2.sqf"
+        elif [[ $line =~ $regex2 ]]; then
+                cur1="${BASH_REMATCH[1]}"
+                echo "_obj setVectorDirAndUp [[$cur1,0],[0,0,1]];"  >> "fn_BuildPrison6-2.sqf"
+                echo "_obj setdir ((getdir _obj) + _rotation);"  >> "fn_BuildPrison6-2.sqf"
+                echo "_obj setPosATL _pos;" >> "fn_BuildPrison6-2.sqf"
+        else
+#                echo "No match found."
+                echo "$line" >> "fn_BuildPrison6-2.sqf"
+        fi
+done < "fn_BuildPrison6.sqf"
+
+
+
