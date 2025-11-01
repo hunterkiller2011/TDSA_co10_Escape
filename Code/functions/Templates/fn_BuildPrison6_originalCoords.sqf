@@ -157,26 +157,26 @@ _pos = [,23854,18148.2,3.92852,];
 _obj = "Land_Net_Fence_4m_F" createVehicle _pos;
 _obj setVectorDirAndUp [,[1,-4.37114e-08,0],[0,0,1],];
 
-_obj = createVehicle [,"Land_CampingChair_V2_F",[23856.4,18157.6,0],[],0,"CAN_COLLIDE",];
 _pos = [,23856.4,18157.6,3.69649,];
+_obj = "Land_CampingChair_V2_F" createVehicle _pos;
 _obj setVectorDirAndUp [,[-1,1.19249e-08,0],[0,0,1],];
 
-_obj = createVehicle [,"Land_CampingChair_V2_white_F",[23856.7,18160,0],[],0,"CAN_COLLIDE",];
 _pos = [,23856.7,18160,3.69649,];
+_obj = "Land_CampingChair_V2_white_F" createVehicle _pos;
 _obj setVectorDirAndUp [,[-0.642788,0.766044,0],[0,0,1],];
 
-_obj = createVehicle [,"Land_ChairPlastic_F",[23859.5,18160.1,0],[],0,"CAN_COLLIDE",];
 _pos = [,23859.5,18160.1,3.6721,];
+_obj = "Land_ChairPlastic_F" createVehicle _pos;
 _obj setVectorDirAndUp [,[0.939693,-0.34202,0],[0,0,1],];
 
-_obj = createVehicle [,"Land_Campfire_burning",[23858.4,18157.7,0],[],0,"CAN_COLLIDE",];
 _pos = [,23858.4,18157.7,3.42526,];
+_obj = "Land_Campfire_burning" createVehicle _pos;
 _obj setVectorDirAndUp [,[0,1,0],[0,0,1],];
 
-_obj = createVehicle [,"Land_Garbage_square5_F",[23858.4,18157.8,0],[],0,"CAN_COLLIDE",];
 _pos = [,23858.4,18157.8,3.22944,];
+_obj = "Land_Garbage_square5_F" createVehicle _pos;
 _obj setVectorDirAndUp [,[0,1,0],[0,0,1],];
 
-_obj = createVehicle [,"Land_Tyre_F",[23860.9,18157.2,0],[],0,"CAN_COLLIDE",];
 _pos = [,23860.9,18157.2,3.26431,];
+_obj = "Land_Tyre_F" createVehicle _pos;
 _obj setVectorDirAndUp [,[0,1,0],[0,0,1],];
