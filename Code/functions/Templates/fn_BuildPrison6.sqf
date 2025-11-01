@@ -17,13 +17,21 @@ if(isserver) then {
 	_obj setdir ((getdir _obj) + _rotation);
 	_obj setPosATL _pos;
 	_obj allowDamage false;
-
+	_bpos = _pos;
+	_height = getTerrainHeightASL (getPosATL _obj);
+	_height = getposASL _obj;
+	
 	_pos = [_center,_center vectorAdd [9.8,2.3,0],_rotation] call A3E_fnc_rotatePosition;
 	_obj = "Land_Wall_Gate_Village" createVehicle _pos;
 	_obj setVectorDirAndUp [[-1,1.19249e-08,0],[0,0,1]];
 	_obj setdir ((getdir _obj) + _rotation);
 	_obj setPosATL _pos;
 	_obj allowDamage false;
+	_npos = getPos _obj;
+	_num = _height select 2;
+	_nnum = _num + 0.18;
+	_npos set [2, _nnum];
+	_obj setPosASL _npos;
 
 	A3E_PrisonGateObject = _obj;
 	
