@@ -28,11 +28,16 @@
 //   a 2D map location representing the center of the flat area, or an empty
 //   array if no suitable location is found.
 
-params [["_flat_area_radius", 3],
+params [["_flat_area_radius", 10],
         ["_offset_radius", 200],
         ["_gradient", 0.1],
         ["_max_tries_within_grid", 1000],
         ["_max_num_search_areas", 0]];
+// params [["_flat_area_radius", 3],
+//         ["_offset_radius", 200],
+//         ["_gradient", 0.1],
+//         ["_max_tries_within_grid", 1000],
+//         ["_max_num_search_areas", 0]];
 
 
 // southwest corner of the map
