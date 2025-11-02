@@ -46,7 +46,17 @@ if(isserver) then {
 
 	_pos = [_center,_center vectorAdd [random 2.0 - 1, random 2.0 -1,0],_rotation] call A3E_fnc_rotatePosition;
 	_backpack setdir ((getdir _backpack) + _rotation);
+	_npos = getPos _obj;
+	_num = _height select 2;
+	_nnum = _num + 0.18;
+	_npos set [2, _nnum];
 	_backpack setPosATL _pos;
+
+	_pos = [_center,_center vectorAdd [13.2,3.4,0],_rotation] call A3E_fnc_rotatePosition;
+	_obj = "Land_Net_Fence_Gate_F" createVehicle _pos;
+	_obj setVectorDirAndUp [[-1,1.19249e-08,0],[0,0,1]];
+	_obj setdir ((getdir _obj) + _rotation);
+	_obj setPosATL _pos;
 	
 };
 
@@ -240,12 +250,6 @@ _obj setPosATL _pos;
 _pos = [_center,_center vectorAdd [9.2,-5.6,0],_rotation] call A3E_fnc_rotatePosition;
 _obj = "Land_Net_Fence_8m_F" createVehicle _pos;
 _obj setVectorDirAndUp [[0,1,0],[0,0,1]];
-_obj setdir ((getdir _obj) + _rotation);
-_obj setPosATL _pos;
-
-_pos = [_center,_center vectorAdd [13.2,3.4,0],_rotation] call A3E_fnc_rotatePosition;
-_obj = "Land_Net_Fence_Gate_F" createVehicle _pos;
-_obj setVectorDirAndUp [[-1,1.19249e-08,0],[0,0,1]];
 _obj setdir ((getdir _obj) + _rotation);
 _obj setPosATL _pos;
 

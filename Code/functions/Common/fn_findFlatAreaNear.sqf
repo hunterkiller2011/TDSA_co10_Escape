@@ -21,9 +21,15 @@
 
 params [ "_center_pos",
         ["_max_offset_radius", 1000],
-        ["_flat_area_radius", 3], 
+        ["_flat_area_radius", 10], 
         ["_gradient", 0.1],
         ["_max_tries", 0]];
+
+// params [ "_center_pos",
+//         ["_max_offset_radius", 1000],
+//         ["_flat_area_radius", 3], 
+//         ["_gradient", 0.1],
+//         ["_max_tries", 0]];
 
 private _position_was_found = false;
 private _max_tries_exceeded = false;

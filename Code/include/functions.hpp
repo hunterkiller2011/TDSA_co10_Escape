@@ -197,6 +197,7 @@ class CfgFunctions
 			class BuildPrison3 {};
 			class BuildPrison4 {};
 			class BuildPrison5 {};
+			class BuildPrison6 {};
 			class BuildComCenter {};
 			class BuildComCenter2 {};
 			class BuildComCenter3 {};

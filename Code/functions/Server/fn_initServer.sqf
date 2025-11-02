@@ -497,7 +497,7 @@ call A3E_fnc_InitTraps;
         private ["_pos"];
 
         _pos = [_marker] call drn_fnc_CL_GetRandomMarkerPos;
-        while {_pos distance _startPos < 10} do {
+        while {_pos distance _startPos < 15} do {
             _pos = [_marker] call drn_fnc_CL_GetRandomMarkerPos;
         };
 
@@ -583,7 +583,7 @@ call A3E_fnc_InitTraps;
 
         } foreach units _guardGroup;
 
-        [_guardGroup, _marker] spawn A3E_fnc_Patrol;
+        //[_guardGroup, _marker] spawn A3E_fnc_Patrol;
 
     } foreach _guardGroups;
 
