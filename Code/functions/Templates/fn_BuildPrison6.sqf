@@ -48,7 +48,7 @@ if(isserver) then {
 	_backpack setdir ((getdir _backpack) + _rotation);
 	_npos = getPos _obj;
 	_num = _height select 2;
-	_nnum = _num + 0.18;
+	_nnum = _num + 0.3;
 	_npos set [2, _nnum];
 	_backpack setPosATL _pos;
 
