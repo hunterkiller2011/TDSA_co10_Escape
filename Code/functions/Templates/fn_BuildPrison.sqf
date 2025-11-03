@@ -1,6 +1,7 @@
 // Object composition created and exported with Map Builder
 // See www.map-builder.info - Map Builder by NeoArmageddon
 // Call this script by [Position,Rotation] execVM "filename.sqf"
+// 
 
 private["_obj","_pos"];
 params ["_center","_rotation","_backpack"];
