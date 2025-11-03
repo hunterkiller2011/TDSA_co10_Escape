@@ -36,7 +36,6 @@ if(isserver) then {
 };
 
 //Stuff that can be local and is created duplicated on each client. This reduces network traffic at start.
-
 _pos = [_center,_center vectorAdd [-1.97363,1.90625,0],_rotation] call A3E_fnc_rotatePosition;
 _obj = "Land_SandbagBarricade_01_half_F" createVehicleLocal _pos;
 _obj setVectorDirAndUp [[-0.707107,0.707107,0],[0,0,1]];
@@ -62,7 +61,6 @@ _pos = [_center,_center vectorAdd [0,-1,0],_rotation] call A3E_fnc_rotatePositio
 _obj = "Land_ClutterCutter_medium_F" createVehicleLocal _pos;
 _obj setdir ((getdir _obj) + _rotation);
 _obj setPosATL _pos;
-
 
 _pos = [_center,_center vectorAdd [1.72363,3.03906,0],_rotation] call A3E_fnc_rotatePosition;
 _obj = "Land_SandbagBarricade_01_F" createVehicleLocal _pos;
@@ -100,6 +98,12 @@ _obj setVectorDirAndUp [[-0.705229,-0.70898,0],[-0,0,1]];
 _obj setdir ((getdir _obj) + _rotation);
 _obj setPosATL _pos;
 
+_pos = [_center,_center vectorAdd [-1.93633,-3.05,1.25],_rotation] call A3E_fnc_rotatePosition;
+_obj = "Land_BagFence_Short_F" createVehicleLocal _pos;
+_obj setVectorDirAndUp [[-0.705229,-0.70898,0],[0,0,1]];
+_obj setdir ((getdir _obj) + _rotation);
+_obj setPosATL _pos;
+
 _pos = [_center,_center vectorAdd [-0.151367,-3.79297,0],_rotation] call A3E_fnc_rotatePosition;
 _obj = "Land_SandbagBarricade_01_half_F" createVehicleLocal _pos;
 _obj setVectorDirAndUp [[-0.707107,0.707107,0],[0,0,1]];
@@ -122,5 +126,11 @@ _obj setPosATL _pos;
 _pos = [_center,_center vectorAdd [1.42285,-2.27148,0],_rotation] call A3E_fnc_rotatePosition;
 _obj = "Land_SandbagBarricade_01_half_F" createVehicleLocal _pos;
 _obj setVectorDirAndUp [[-0.708664,0.705546,0],[0,0,1]];
+_obj setdir ((getdir _obj) + _rotation);
+_obj setPosATL _pos;
+
+_pos = [_center,_center vectorAdd [-0.73633,-3.78,1.25],_rotation] call A3E_fnc_rotatePosition;
+_obj = "Land_BagFence_Corner_F" createVehicleLocal _pos;
+_obj setVectorDirAndUp [[0.705229,-0.70898,0],[0,0,1]];
 _obj setdir ((getdir _obj) + _rotation);
 _obj setPosATL _pos;
