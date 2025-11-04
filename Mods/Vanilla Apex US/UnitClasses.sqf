@@ -725,9 +725,15 @@ a3e_arr_extractiontypes = [
 // always the fallback option, use BIS units if mod has no helicopters
 //////////////////////////////////////////////////////////////////
 a3e_arr_extraction_chopper = [
-    "O_T_VTOL_02_infantry_dynamicLoadout_F"];
+    //"O_T_VTOL_02_infantry_dynamicLoadout_F"
+	"O_Heli_Light_02_unarmed_F"
+	,"O_Heli_Transport_04_bench_F"
+	,"O_Heli_Transport_04_covered_F"
+	];
 a3e_arr_extraction_chopper_escort = [
-	"O_T_VTOL_02_infantry_dynamicLoadout_F"];
+	//"O_T_VTOL_02_infantry_dynamicLoadout_F"
+	"O_Heli_Attack_02_dynamicLoadout_F"
+	];
 
 //////////////////////////////////////////////////////////////////
 // RunExtractionBoat.sqf
