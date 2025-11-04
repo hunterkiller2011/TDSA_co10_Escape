@@ -2,7 +2,7 @@
 private _fenceRotateDir = random 360;
 
 private _backPack = (selectRandom (missionNamespace getVariable ["a3e_arr_PrisonBackpacks", ["B_AssaultPack_khk"]])) createvehicle A3E_StartPos;
-private _template = (selectRandom (missionNamespace getVariable ["A3E_PrisonTemplates", ["a3e_fnc_BuildPrison", "a3e_fnc_BuildPrison1", "a3e_fnc_BuildPrison2", "a3e_fnc_BuildPrison3", "a3e_fnc_BuildPrison4", "a3e_fnc_BuildPrison5", a3e_fnc_BuildPrison6]]));
+private _template = (selectRandom (missionNamespace getVariable ["A3E_PrisonTemplates", ["a3e_fnc_BuildPrison", "a3e_fnc_BuildPrison1", "a3e_fnc_BuildPrison2", "a3e_fnc_BuildPrison3", "a3e_fnc_BuildPrison4", "a3e_fnc_BuildPrison5", "a3e_fnc_BuildPrison6"]]));
 //private _template = (selectRandom (missionNamespace getVariable ["A3E_PrisonTemplates", ["a3e_fnc_BuildPrison6"]]));
 
 [A3E_StartPos, _fenceRotateDir, _backPack] remoteExec [_template, 0, true];
