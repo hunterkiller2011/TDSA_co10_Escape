@@ -335,6 +335,20 @@
 			"name" : "co10_Escape_RHS_RU_vs_US"
 		},
 		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
+			"mod" : "RHS d",
+			"replace" : {},
+			"name" : "co10_Escape_RHS_US_vs_RU"
+		},
+		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
+			"mod" : "RHS-US d",
+			"replace" : {},
+			"name" : "co10_Escape_RHS_RU_vs_US"
+		},
+		{
 			"island" : "Porto",
 			"sqm": "Porto",
 			"mod" : "RHS d",
@@ -1415,6 +1429,34 @@
 		{
 			"island" : "Lybor Winter",
 			"sqm": "Lybor",
+			"mod" : "RHS-US w",
+			"replace" : {},
+			"name" : "co10_Escape_RHS_RU_vs_US"
+		},
+		{
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "RHS w",
+			"replace" : {},
+			"name" : "co10_Escape_RHS_US_vs_RU"
+		},
+		{
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "RHS-US w",
+			"replace" : {},
+			"name" : "co10_Escape_RHS_RU_vs_US"
+		},
+		{
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
+			"mod" : "RHS w",
+			"replace" : {},
+			"name" : "co10_Escape_RHS_US_vs_RU"
+		},
+		{
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
 			"mod" : "RHS-US w",
 			"replace" : {},
 			"name" : "co10_Escape_RHS_RU_vs_US"

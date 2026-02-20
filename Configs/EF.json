@@ -271,6 +271,13 @@
 			"name" : "co10_Escape_EF_CSAT_vs_MJTF_and_AAF"
 		},
 		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
+			"mod" : "EFdes",
+			"replace" : {},
+			"name" : "co10_Escape_EF_CSAT_vs_MJTF_and_AAF"
+		},
+		{
 			"island" : "Capraia",
 			"sqm": "IsolaDiCapraia",
 			"mod" : "EFdes",
@@ -658,6 +665,20 @@
 		{
 			"island" : "Lybor Winter",
 			"sqm": "Lybor",
+			"mod" : "EFwdl",
+			"replace" : {},
+			"name" : "co10_Escape_EF_CSAT_vs_MJTF_and_AAF"
+		},
+		{
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "EFwdl",
+			"replace" : {},
+			"name" : "co10_Escape_EF_CSAT_vs_MJTF_and_AAF"
+		},
+		{
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
 			"mod" : "EFwdl",
 			"replace" : {},
 			"name" : "co10_Escape_EF_CSAT_vs_MJTF_and_AAF"

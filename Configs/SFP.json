@@ -292,6 +292,13 @@
 			"name" : "co10_Escape_SFP_LDF_vs_SF_and_FDF"
 		},
 		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
+			"mod" : "SFP d",
+			"replace" : {},
+			"name" : "co10_Escape_SFP_LDF_vs_SF_and_FDF"
+		},
+		{
 			"island" : "Capraia",
 			"sqm": "IsolaDiCapraia",
 			"mod" : "SFP d",
@@ -679,6 +686,20 @@
 		{
 			"island" : "Lybor Winter",
 			"sqm": "Lybor",
+			"mod" : "SFP w",
+			"replace" : {},
+			"name" : "co10_Escape_SFP_LDF_vs_SF_and_FDF"
+		},
+		{
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "SFP",
+			"replace" : {},
+			"name" : "co10_Escape_SFP_LDF_vs_SF_and_FDF"
+		},
+		{
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
 			"mod" : "SFP w",
 			"replace" : {},
 			"name" : "co10_Escape_SFP_LDF_vs_SF_and_FDF"

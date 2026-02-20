@@ -1050,6 +1050,13 @@
 			"name" : "co10_Escape_IFA3_UK_vs_GER"
 		},
 		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
+			"mod" : "IFA3 d",
+			"replace" : {},
+			"name" : "co10_Escape_IFA3_UK_vs_GER"
+		},
+		{
 			"island" : "Capraia",
 			"sqm": "IsolaDiCapraia",
 			"mod" : "IFA3 d",
@@ -1213,6 +1220,13 @@
 		{
 			"island" : "Fjord",
 			"sqm": "Fjord",
+			"mod" : "IFA3 w",
+			"replace" : {},
+			"name" : "co10_Escape_IFA3_Winter_SOV_vs_GER"
+		},
+		{
+			"island" : "Lybor Winter",
+			"sqm": "Lybor",
 			"mod" : "IFA3 w",
 			"replace" : {},
 			"name" : "co10_Escape_IFA3_Winter_SOV_vs_GER"

@@ -407,6 +407,16 @@
 				}
 		},
 		{
+			"name" : "Zargabad_2025",
+			"class" : "cup_Zargabad_a3",
+			"path" : "./Islands/Zargabad_2025/",
+			"replace" :
+				{
+				"ISLAND" : "Zargabad",
+				"ISLANDNAME" : "Zargabad"
+				}
+		},
+		{
 			"name" : "Porto",
 			"class" : "Porto",
 			"path" : "./Islands/Porto/",
@@ -1037,6 +1047,26 @@
 				}
 		},
 		{
+			"name" : "Archie",
+			"class" : "archie",
+			"path" : "./Islands/archie/",
+			"replace" :
+				{
+				"ISLAND" : "Archie",
+				"ISLANDNAME" : "Archie"
+				}
+		},
+		{
+			"name" : "Archie Winter",
+			"class" : "archie_w",
+			"path" : "./Islands/archie_w/",
+			"replace" :
+				{
+				"ISLAND" : "Archie",
+				"ISLANDNAME" : "Archie"
+				}
+		},
+		{
 			"name" : "Dagger_Island",
 			"class" : "dagger_island_summer",
 			"path" : "./Islands/Dagger_Island/",
@@ -1387,6 +1417,13 @@
 		{
 			"island" : "Zargabad",
 			"sqm": "Zargabad",
+			"mod" : "Vanilla",
+			"replace" : {},
+			"name" : "co10_Escape_BIS_NATO_vs_CSAT"
+		},
+		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
 			"mod" : "Vanilla",
 			"replace" : {},
 			"name" : "co10_Escape_BIS_NATO_vs_CSAT"
@@ -2094,6 +2131,13 @@
 		{
 			"island" : "Zargabad",
 			"sqm": "Zargabad",
+			"mod" : "Vanilla US",
+			"replace" : {},
+			"name" : "co10_Escape_BIS_CSAT_vs_NATO"
+		},
+		{
+			"island" : "Zargabad_2025",
+			"sqm": "Zargabad_2025",
 			"mod" : "Vanilla US",
 			"replace" : {},
 			"name" : "co10_Escape_BIS_CSAT_vs_NATO"
@@ -2829,20 +2873,6 @@
         {
 			"island" : "Lybor",
 			"sqm": "Lybor",
-			"mod" : "Vanilla Apex",
-			"replace" : {},
-			"name" : "co10_Escape_APEX_NATO_vs_CSAT"
-		},
-        {
-			"island" : "Lybor",
-			"sqm": "Lybor",
-			"mod" : "Vanilla Apex US",
-			"replace" : {},
-			"name" : "co10_Escape_APEX_CSAT_vs_NATO"
-		},
-        {
-			"island" : "Lybor",
-			"sqm": "Lybor",
 			"mod" : "Vanilla Contact US",
 			"replace" : {},
 			"name" : "co10_Escape_Contact_CSAT_vs_NATO"
@@ -2864,20 +2894,6 @@
         {
 			"island" : "Lybor Winter",
 			"sqm": "Lybor",
-			"mod" : "Vanilla Apex",
-			"replace" : {},
-			"name" : "co10_Escape_APEX_NATO_vs_CSAT"
-		},
-        {
-			"island" : "Lybor Winter",
-			"sqm": "Lybor",
-			"mod" : "Vanilla Apex US",
-			"replace" : {},
-			"name" : "co10_Escape_APEX_CSAT_vs_NATO"
-		},
-        {
-			"island" : "Lybor Winter",
-			"sqm": "Lybor",
 			"mod" : "Vanilla Contact US",
 			"replace" : {},
 			"name" : "co10_Escape_Contact_CSAT_vs_NATO"
@@ -2885,6 +2901,48 @@
         {
 			"island" : "Lybor Winter",
 			"sqm": "Lybor",
+			"mod" : "Vanilla US",
+			"replace" : {},
+			"name" : "co10_Escape_BIS_CSAT_vs_NATO"
+		},
+        {
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "Vanilla",
+			"replace" : {},
+			"name" : "co10_Escape_BIS_NATO_vs_CSAT"
+		},
+        {
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "Vanilla Contact US",
+			"replace" : {},
+			"name" : "co10_Escape_Contact_CSAT_vs_NATO"
+		},
+        {
+			"island" : "Archie",
+			"sqm": "archie",
+			"mod" : "Vanilla US",
+			"replace" : {},
+			"name" : "co10_Escape_BIS_CSAT_vs_NATO"
+		},
+        {
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
+			"mod" : "Vanilla",
+			"replace" : {},
+			"name" : "co10_Escape_BIS_NATO_vs_CSAT"
+		},
+        {
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
+			"mod" : "Vanilla Contact US",
+			"replace" : {},
+			"name" : "co10_Escape_Contact_CSAT_vs_NATO"
+		},
+        {
+			"island" : "Archie Winter",
+			"sqm": "archie_w",
 			"mod" : "Vanilla US",
 			"replace" : {},
 			"name" : "co10_Escape_BIS_CSAT_vs_NATO"
