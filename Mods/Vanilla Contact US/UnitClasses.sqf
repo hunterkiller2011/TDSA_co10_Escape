@@ -15,6 +15,7 @@ _enemyFrequency = _this select 0;
 // Index 1: Number of seats
 a3e_arr_heli_capture = [
     ["O_Heli_Light_02_unarmed_F", 8],  // Orca (OPFOR)
+	["rhs_uh1h_hidf_unarmed", 8], //UH-1
     ["I_Heli_Transport_02_F", 16], // Mohawk (AAF/Independent)
     ["O_Heli_Transport_04_covered_F", 16] // Taru (CSAT/OPFOR)
 ];
@@ -35,7 +36,10 @@ a3e_arr_Escape_StartPositionGuardTypes = [
 	"I_L_Looter_Pistol_F",
 	"I_L_Looter_SG_F",
 	"I_L_Looter_Rifle_F",
-	"I_L_Looter_SMG_F"];
+	"I_L_Looter_SMG_F",
+	"I_L_Criminal_SG_F",
+	"I_L_Criminal_SMG_F",
+	"I_L_Hunter_F"];
 
 // Prison backpack secondary weapon (and corresponding magazine type).
 a3e_arr_PrisonBackpackWeapons = [];
@@ -420,9 +424,13 @@ a3e_arr_Escape_RoadBlock_MannedVehicleTypes_Ind = [
 // Random array. Vehicle classes (preferrably trucks) transporting enemy reinforcements.
 a3e_arr_Escape_ReinforcementTruck_vehicleClasses = [
 	"B_T_Truck_01_transport_F"
+	,"CUP_B_nM1038_DF_NATO"
 	,"B_T_Truck_01_covered_F"];
 a3e_arr_Escape_ReinforcementTruck_vehicleClasses_Ind = [
 	"I_E_Offroad_01_covered_F"
+	,"CUP_B_nM1038_NATO_T"
+	,"rhsusf_stryker_m1126_m2_d"
+	,"rhsusf_M1232_usarmy_d"
 	,"I_E_Truck_02_F"
 	,"I_E_Van_02_transport_MP_F"];
 
@@ -720,6 +728,10 @@ a3e_arr_CivilianCarWeapons pushback ["sgun_HunterShotgun_01_F", "2Rnd_12Gauge_Pe
 a3e_arr_CivilianCarWeapons pushback ["sgun_HunterShotgun_01_F", "2Rnd_12Gauge_Slug", 16];
 a3e_arr_CivilianCarWeapons pushback ["sgun_HunterShotgun_01_sawedoff_F", "2Rnd_12Gauge_Pellets", 16];
 a3e_arr_CivilianCarWeapons pushback ["sgun_HunterShotgun_01_sawedoff_F", "2Rnd_12Gauge_Slug", 16];
+a3e_arr_CivilianCarWeapons pushback ["rhs_weap_Izh18", "rhsgref_1Rnd_Slug", 16];
+a3e_arr_CivilianCarWeapons pushback ["rhs_weap_m38", "rhsgref_5Rnd_762x54_m38", 6];
+a3e_arr_CivilianCarWeapons pushback ["CUP_sgun_CZ584", "CUP_1Rnd_12Gauge_Slug", 16];
+a3e_arr_CivilianCarWeapons pushback ["rhs_weap_Izh18", "rhsgref_1Rnd_Slug", 16];
 a3e_arr_CivilianCarWeapons pushback ["srifle_DMR_06_hunter_F", "10Rnd_Mk14_762x51_Mag", 12];
 a3e_arr_CivilianCarWeapons pushback ["srifle_DMR_06_hunter_F", "20Rnd_762x51_Mag", 9];
 a3e_arr_CivilianCarWeapons pushback ["SMG_05_F", "30Rnd_9x21_Mag_SMG_02", 6];
@@ -911,7 +923,11 @@ a3e_additional_weapon_box_2 = "Box_EAF_WpsSpecial_F";
 // mortar spawned in the mortar camps
 //////////////////////////////////////////////////////////////////
 a3e_arr_MortarSite = [
-	"B_T_Mortar_01_F"];
+	"B_T_Mortar_01_F"
+	,"rhsgref_nat_2b14"
+	,"CUP_B_M252_US"
+	,"CUP_B_M119_US"
+	,"CUP_B_D30_AFU"];
 
 //////////////////////////////////////////////////////////////////
 // fn_CallCAS.sqf
