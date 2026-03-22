@@ -104,7 +104,7 @@ switch (_enemyFrequency) do {
 		,"B_T_Truck_01_Repair_F"
 		,"B_T_Truck_01_transport_F"
 		,"B_T_Truck_01_covered_F"
-		,"B_T_APC_Tracked_01_AA_F"
+		,"B_T_APC_Wheeled_01_cannon_F"
 		,"B_T_APC_Wheeled_01_cannon_F"
 		,"B_T_APC_Tracked_01_CRV_F"
 		,"B_T_APC_Tracked_01_rcws_F"
@@ -155,7 +155,7 @@ switch (_enemyFrequency) do {
 		,"B_T_Truck_01_Repair_F"
 		,"B_T_Truck_01_transport_F"
 		,"B_T_Truck_01_covered_F"
-		,"B_T_APC_Tracked_01_AA_F"
+		,"B_T_APC_Wheeled_01_cannon_F"
 		,"B_T_APC_Wheeled_01_cannon_F"
 		,"B_T_APC_Tracked_01_CRV_F"
 		,"B_T_APC_Tracked_01_rcws_F"
@@ -209,7 +209,7 @@ switch (_enemyFrequency) do {
 		,"B_T_Truck_01_Repair_F"
 		,"B_T_Truck_01_transport_F"
 		,"B_T_Truck_01_covered_F"
-		,"B_T_APC_Tracked_01_AA_F"
+		,"B_T_APC_Wheeled_01_cannon_F"
 		,"B_T_APC_Wheeled_01_cannon_F"
 		,"B_T_APC_Tracked_01_CRV_F"
 		,"B_T_APC_Tracked_01_rcws_F"
@@ -385,7 +385,7 @@ a3e_arr_ComCenDefence_lightArmorClasses = [
 	,"B_T_MRAP_01_gmg_F"];
 // Random array. Heavy armored vehicles guarding the communication centers.
 a3e_arr_ComCenDefence_heavyArmorClasses = [
-	"B_T_APC_Tracked_01_AA_F"
+	"B_T_APC_Wheeled_01_cannon_F"
 	,"B_T_MBT_01_cannon_F"
 	,"B_T_MBT_01_TUSK_F"];
 	if(A3E_Param_UseDLCTanks==1) then {
@@ -470,7 +470,7 @@ a3e_arr_Escape_AmmoDepot_ParkedVehicleClasses = [
 
 //Random array. Types of helicopters to spawn
 a3e_arr_O_attack_heli = [
-	"B_Heli_Attack_01_dynamicLoadout_F"];
+	"B_Heli_Light_01_dynamicLoadout_F"];
 a3e_arr_O_transport_heli = [
 	"B_Heli_Transport_01_F"
 	,"B_Heli_Transport_01_F"
