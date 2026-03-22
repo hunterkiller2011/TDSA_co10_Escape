@@ -102,7 +102,7 @@ switch (_enemyFrequency) do {
 		,"O_T_LSV_02_AT_F"
 		,"O_T_UGV_01_rcws_ghex_F"
 		,"O_T_APC_Wheeled_02_rcws_ghex_F"
-		,"O_T_APC_Tracked_02_AA_ghex_F"
+		,"O_T_APC_Wheeled_02_rcws_ghex_F"
 		,"O_T_APC_Tracked_02_cannon_ghex_F"
 		,"O_T_MBT_02_arty_ghex_F"
 		,"O_T_MBT_02_cannon_ghex_F"
@@ -149,10 +149,10 @@ switch (_enemyFrequency) do {
 		,"O_T_LSV_02_AT_F"
 		,"O_T_UGV_01_rcws_ghex_F"
 		,"O_T_APC_Wheeled_02_rcws_ghex_F"
-		,"O_T_APC_Tracked_02_AA_ghex_F"
+		,"O_T_APC_Wheeled_02_rcws_ghex_F"
 		,"O_T_APC_Tracked_02_cannon_ghex_F"
 		,"O_T_APC_Wheeled_02_rcws_ghex_F"
-		,"O_T_APC_Tracked_02_AA_ghex_F"
+		,"O_T_APC_Wheeled_02_rcws_ghex_F"
 		,"O_T_APC_Tracked_02_cannon_ghex_F"
 		,"O_T_MBT_02_arty_ghex_F"
 		,"O_T_MBT_02_arty_ghex_F"
@@ -205,10 +205,10 @@ switch (_enemyFrequency) do {
 		,"O_T_LSV_02_AT_F"
 		,"O_T_UGV_01_rcws_ghex_F"
 		,"O_T_APC_Wheeled_02_rcws_ghex_F"
-		,"O_T_APC_Tracked_02_AA_ghex_F"
+		,"O_T_APC_Wheeled_02_rcws_ghex_F"
 		,"O_T_APC_Tracked_02_cannon_ghex_F"
 		,"O_T_APC_Wheeled_02_rcws_ghex_F"
-		,"O_T_APC_Tracked_02_AA_ghex_F"
+		,"O_T_APC_Wheeled_02_rcws_ghex_F"
 		,"O_T_APC_Tracked_02_cannon_ghex_F"
 		,"O_T_MBT_02_arty_ghex_F"
 		,"O_T_MBT_02_arty_ghex_F"
@@ -385,7 +385,7 @@ a3e_arr_ComCenDefence_lightArmorClasses = [
 a3e_arr_ComCenDefence_heavyArmorClasses = [
 	"O_T_MBT_02_cannon_ghex_F"
 	,"O_T_APC_Tracked_02_cannon_ghex_F"
-	,"O_T_APC_Tracked_02_AA_ghex_F"];
+	,"O_T_APC_Wheeled_02_rcws_ghex_F"];
 	if(A3E_Param_UseDLCTanks==1) then {
 		a3e_arr_ComCenDefence_heavyArmorClasses pushback "O_T_MBT_04_cannon_F";
 		a3e_arr_ComCenDefence_heavyArmorClasses pushback "O_T_MBT_04_command_F";
@@ -478,8 +478,8 @@ a3e_arr_Escape_AmmoDepot_ParkedVehicleClasses = [
 
 //Random array. Types of helicopters to spawn
 a3e_arr_O_attack_heli = [
-	"O_Heli_Attack_02_black_F"
-	,"O_T_VTOL_02_infantry_F"];
+	"O_Heli_Light_02_dynamicLoadout_F"];
+//	,"O_T_VTOL_02_infantry_F"];
 a3e_arr_O_transport_heli = [
 	"O_Heli_Light_02_unarmed_F"];
 	if(A3E_Param_UseDLCHelis==1) then {
