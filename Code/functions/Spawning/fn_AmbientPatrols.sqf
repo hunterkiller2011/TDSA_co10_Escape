@@ -8,7 +8,7 @@ private _plist = [] call A3E_fnc_GetPlayers;
 
 
 //Reduce spawn distance in first 10 seconds of mission
-if(time<10) then {
+if(time<30) then {
 	_MinSpawnCircleDistance = _MinSpawnCircleDistance/2;
 	_MaxSpawnCircleDistance = _MaxSpawnCircleDistance/2;
 };
