@@ -204,6 +204,8 @@ private _backpack = [] call A3E_fnc_createStartpos;
 
 [true] call A3E_fnc_InitVillageMarkers;
 //[true] call drn_fnc_InitAquaticPatrolMarkers;
+call compile preprocessFileLineNumbers "Island\PatrolBoatMarkers.sqf";
+execVM "Scripts\spawnPatrolBoats.sqf";
 
 //Wait for players to actually arrive ingame. This may be a long time if server is set to persistent
 waituntil{uisleep 1; count([] call A3E_FNC_GetPlayers)>0};
