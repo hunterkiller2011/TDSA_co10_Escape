@@ -58,6 +58,18 @@ approximation intentional? Affects how zone placement ports. _(Surfaced Sprint 1
 no de-dup guard, so a function registered twice is scheduled twice. Intended, or cleanup for the port's
 scheduler design? _(Surfaced Sprint 1.)_
 
+## Q-011 — Server-local debug markers visibility
+**Status:** open
+`Common/fn_InitVillageMarkers.sqf` runs server-side using `createMarkerLocal`, whose markers aren't
+visible to clients — verify the debug village markers appear anywhere. Its `[true]` arg is ignored (reads
+`A3E_Debug`). _(Surfaced Sprint 2.)_
+
+## Q-012 — `handleScore` gating & registration asymmetry
+**Status:** open
+`Common/fn_handleScore.sqf` gates on `!isNil "a3e_var_Escape_SearchLeader_civilianReporting"` (variable
+presence, not value) — may misfire if defined-but-false. It is registered server-side (initPlayer) whereas
+`handleRating` is client-side (initLocalPlayer) — intentional asymmetry? _(Surfaced Sprint 2.)_
+
 ---
 
 _Format for new entries:_
@@ -73,3 +85,4 @@ _Format for new entries:_
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton; seeded Q-001…Q-008 (conversion unknowns) |
 | 2026-06-30 | Claude | Added Q-009, Q-010 from code-reference Sprint 1 |
+| 2026-07-01 | Claude | Added Q-011, Q-012 from code-reference Sprint 2 (Common) |

@@ -44,6 +44,26 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** medium (perf) · **candidate — verify**
 - **Repro / context:** `Code/functions/ace/fn_CaptiveHandle.sqf` — `while {...} do {_unit setCaptive true;}` with no `sleep`, a per-frame spin while unconscious; also a workaround for an unidentified captive-reset cause.
 
+## BUG-009 — `CheckCampDistance` default-branch typo + no switch default
+- **Status:** open · **Severity:** low · **confirmed**
+- **Repro / context:** `Code/functions/Common/fn_CheckCampDistance.sqf:23` sets `_checkagainst` (lowercase g) not `_checkAgainst`; and the `switch` (`:25`) has no `default`, so an unknown type leaves `_positions` nil and the function silently returns `true`. Harmless today (sole caller passes all 3 args).
+
+## BUG-010 — `findControl` floods the client (~9M sidechats)
+- **Status:** open · **Severity:** medium (if run) · **confirmed**; dead code
+- **Repro / context:** `Code/functions/Common/fn_findControl.sqf:11` — the `else` branch runs `player sidechat` on every non-match inside a 3000×3000 nested loop (~9M iterations), freezing/flooding the client. No callers (dead debug scaffolding). Delete or gate.
+
+## BUG-011 — `findFlatArea` return gated by misspelled flag (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Code/functions/Common/fn_findFlatArea.sqf` — return gated by `_max_num_search_areas_excceded` (misspelled); the "exceeded"(failure) semantics look inverted vs the success return. Works with the default limit 0, but a large limit could drop a valid found position.
+
+## BUG-012 — `hijack` downed-check misses ACE unconscious (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Code/functions/Common/fn_hijack.sqf` — downed detection reads only `AT_Revive_isUnconscious`, not `ACE_Revive_isUnconscious`, so under ACE the hack can continue while the hacker is unconscious. Also `A3E_Terminal_Hacked` is set true at start then reverted on failure (brief false "hacked" state).
+
+## BUG-013 — `healAtBuilding` full-heal bypasses ACE Medical (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Code/functions/Common/fn_healAtBuilding.sqf` — `setDamage 0` likely bypasses ACE Medical wound tracking (inconsistent state under ACE); no cooldown/limit.
+
 ---
 
 _Format for new entries:_
@@ -61,3 +81,4 @@ _Format for new entries:_
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton |
 | 2026-06-30 | Claude | Logged BUG-001…008 from code-reference Sprint 1 |
+| 2026-07-01 | Claude | Added BUG-009…013 from code-reference Sprint 2 (Common) |

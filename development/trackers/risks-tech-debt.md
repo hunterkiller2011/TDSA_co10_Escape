@@ -54,6 +54,28 @@ must be normalised before/during the port to Enforce Script (case-sensitive). _(
 `fn_getSideColor.sqf` exists in both `Code/functions/Helper/` and `Code/functions/Common/` with the same
 logic; `functions.hpp` declares one `GetSideColor`, so one copy is shadowed/unreachable. Consolidate.
 
+## RD-010 — Dead / debug-only code candidates in Common
+**Severity:** low · **Status:** open
+No `fnc_` callers indexed for `CompileGroupVar`, `GetEnemyCount`, `groupChat`, `systemChat`, `findControl`
+— candidate dead/debug-only code (mind RD-006 before pruning). `checkUnitClasses` is an intentional dev
+QA tool but overwrites `A3E_Param_*` globals as a side effect — must never run at runtime. _(Sprint 2.)_
+
+## RD-011 — Duplication in Common utilities
+**Severity:** low · **Status:** open
+`RandomPatrolPos` vs `RandomSpawnPos` are near copy-paste (both keep an unused `_minSpawnDistance`; neither
+has a max-iteration guard). `GetEnemyCount` may duplicate `Spawning/fn_getDynamicSquadsize`. See RD-009. _(Sprint 2.)_
+
+## RD-012 — Perf hotspots in Common
+**Severity:** low-medium · **Status:** open
+`GetPlayers` recomputed twice per iteration in `Server/fn_RunExtraction*` `while` loops; `cleanupTerrain`
+issues one persistent JIP `hideObjectGlobal` remoteExec per object ×30+ camps (JIP-queue bloat, never
+restored); `initArsenal` does a full `CfgWeapons` scan per box. _(Sprint 2.)_
+
+## RD-013 — Inconsistent associative data structures
+**Severity:** low · **Status:** open
+`getAssocArrayEntry` uses parallel arrays with a `[]` not-found sentinel (ambiguous) while `loadLocalClasses`
+uses modern HashMaps — inconsistent idioms across Common. _(Sprint 2.)_
+
 ---
 
 _Format for new entries:_
@@ -69,3 +91,4 @@ _Format for new entries:_
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton; seeded RD-001…RD-005 |
 | 2026-06-30 | Claude | Added RD-006…009 from code-reference Sprint 1 |
+| 2026-07-01 | Claude | Added RD-010…013 from code-reference Sprint 2 (Common) |
