@@ -81,6 +81,22 @@ Also `Guard`/`Search` set `setWaypointTimeout [0,20,6]` (max < mid) — looks li
 `fn_AquaticPatrol.sqf` tags boat groups with state `"PATROL"`, the same tag as foot patrols — verify
 `OrderSearch`/`SeekShelter` and other consumers don't mis-treat boats as infantry. _(Surfaced Sprint 3.)_
 
+## Q-015 — Which zone/spawn framework is authoritative?
+**Status:** open
+`initPatrolZone`/`activatePatrolZone` (legacy patrolZones + BIS pairs) vs the `A3E_Zones` HashMap framework
+(`initZone`/populate*), and is `MilitaryTraffic` duplicated (Spawning + DRN via initServer)? This decides the
+Reforger spawn/zone architecture. See RD-018. _(Surfaced Sprint 4.)_
+
+## Q-016 — Does the hidden-RscHTML stats GET fire on a dedicated server?
+**Status:** open
+The external stats lifecycle issues its GET via `htmlLoad` on a hidden `RscHTML` UI control. On a headless/
+dedicated server (no UI) this may never fire, silently no-op'ing the whole external-stats system. Verify. _(Surfaced Sprint 4.)_
+
+## Q-017 — SearchLeader detection latch serializes two sides
+**Status:** open
+`A3E_var_PlayerCanBeDetected` is a single global latch shared by the OPFOR and Independent detection triggers,
+so only one side can report a sighting at a time. Intended, or should each side latch independently? _(Surfaced Sprint 4.)_
+
 ---
 
 _Format for new entries:_
@@ -98,3 +114,4 @@ _Format for new entries:_
 | 2026-06-30 | Claude | Added Q-009, Q-010 from code-reference Sprint 1 |
 | 2026-07-01 | Claude | Added Q-011, Q-012 from code-reference Sprint 2 (Common) |
 | 2026-07-01 | Claude | Added Q-013, Q-014 from code-reference Sprint 3 (AI) |
+| 2026-07-01 | Claude | Added Q-015…017 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |

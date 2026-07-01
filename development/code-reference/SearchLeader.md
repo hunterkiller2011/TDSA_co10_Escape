@@ -1,106 +1,107 @@
 # Code Reference — SearchLeader
-_Last updated: 2026-06-30 (local)_ · _Status: skeleton_
+_Last updated: 2026-06-30 (local)_ · _Status: documented_
 
 > Player detection, sighting reports to HQ, and search/artillery escalation. One entry per source file in `Code/functions/SearchLeader/`. Fields are stubs (`_(to document)_`) until documented. See [README.md](README.md) for field definitions, the call-name caveat, and the caller index [_xref.md](_xref.md).
 
-### a3e_fnc_PlayerDetection  —  `Code/functions/SearchLeader/fn_PlayerDetection.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_PlayerDetection  —  `Code/functions/SearchLeader/fn_PlayerDetection.sqf`  ·  _status: documented_
+- **Purpose:** (Re)builds the two world-scale "an enemy has spotted a player" detection triggers — one for OPFOR, one for Independent — that fire `ReportToHQ` when an AI faction gains detection knowledge of a Blufor player. Acts as the entry gate of the detect→report→dispatch→escalate loop.
+- **Inputs:** No params. Reads globals `A3E_VAR_Side_Blufor_Str`, `A3E_VAR_Side_Opfor_Str`, `A3E_VAR_Side_Ind_Str` (side codes for trigger activation, `fn_PlayerDetection.sqf:16,31`), `A3E_VAR_Side_Opfor`/`A3E_VAR_Side_Ind` (side objects, embedded into the trigger statement string), `worldSize` (`:1`). Reads previous trigger handles `A3E_OpforDetectionTrigger`/`A3E_IndepDetectionTrigger` to delete stale ones. Precondition: those side globals must be initialized (done in server init).
+- **Outputs:** Sets `A3E_var_PlayerCanBeDetected = true` (`:5`), re-enabling detection. Creates 2 `EmptyDetector` triggers covering the whole map (`setTriggerArea[worldCenter,worldCenter,0,true]`, interval 5s), stores their handles in `A3E_OpforDetectionTrigger` / `A3E_IndepDetectionTrigger`. Deletes any pre-existing triggers of those handles. The trigger `setTriggerStatements` on activation `spawn`s `A3E_FNC_ReportToHQ` with the detecting side string.
+- **Calls:** none directly (leaf). Indirectly: the triggers it builds spawn `A3E_FNC_ReportToHQ` when they fire (activation is `[Blufor present] with [Opfor/Ind "D" = detected]`).
+- **Called by:** `Code/functions/Server/fn_initServer.sqf:240` (initial setup). Re-armed repeatedly by `fn_ReportToHQ.sqf:18,67,80,96` and `fn_recordSighting.sqf:7` (each spawned after a report resolves, to refresh the triggers). [engine/scheduler] the triggers themselves are the entry points into `ReportToHQ`.
+- **Processing:** Set `A3E_var_PlayerCanBeDetected=true`; for each of OPFOR and Independent: fetch and `deletevehicle` the old trigger if non-null; create a new full-map `EmptyDetector`; set interval 5, area = whole map, activation = Blufor present with enemy-side-Detected; set statements so that `this && A3E_var_PlayerCanBeDetected` fires `["<side>"] spawn A3E_FNC_ReportToHQ`; store handle back to the namespace variable.
+- **Theory of operation:** This is the sensor stage. Rather than polling in a loop, it delegates to Arma's trigger engine: a full-map trigger evaluates whether an enemy faction "knows about" (side detection) any player. When it does, exactly one `ReportToHQ` is spawned per side; that report then latches `A3E_var_PlayerCanBeDetected=false` so no further triggers fire until the report resolves and re-calls `PlayerDetection`. This creates a one-report-at-a-time serialized gate.
+- **Whys & questions:** Why two separate triggers instead of one with combined sides? Because Arma trigger activation takes a single "detected by" side. Why store the trigger statement via `format`/`str A3E_VAR_Side_Opfor`? So the runtime side object is captured as a literal in the compiled statement string (e.g. `["EAST"] spawn ...`). The `false` last arg to `createTrigger` means server-only (not global).
+- **Unresolved issues:** Magic interval `5` and the whole-map area are hardcoded. The `A3E_var_PlayerCanBeDetected` gate is a single global shared by both triggers, so an OPFOR report and an Independent report cannot proceed concurrently — one side's report suppresses the other. Casing: function is `A3E_FNC_ReportToHQ` in the trigger string vs `A3E_fnc_ReportToHQ` elsewhere (Arma is case-insensitive, cosmetic only).
+- **Reforger port notes:** Reforger has no SQF `createTrigger`/`EmptyDetector`/`knowsAbout` side-knowledge equivalent. Port as an Enfusion periodic system that queries AI perception/target knowledge of players per faction; replace the map-wide trigger + `A3E_var_PlayerCanBeDetected` latch with an explicit report queue/state machine.
 
-### a3e_fnc_ReportToHQ  —  `Code/functions/SearchLeader/fn_ReportToHQ.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_ReportToHQ  —  `Code/functions/SearchLeader/fn_ReportToHQ.sqf`  ·  _status: documented_
+- **Purpose:** Runs when a detection trigger fires: picks an enemy unit that "knows about" a player, plays a radio-report animation/sound over a report window, and — if the reporter survives to the end — records the sighting so a known position is created. Simulates a soldier calling in an enemy sighting.
+- **Inputs:** `params["_side"]` — the reporting side as a string ("EAST"/"WEST"/"GUER"/"CIV"; `:1`, mapped to side objects `:7-12`). Reads globals `A3E_var_DetectionKnowledgeThreshold` (default 2.5, `:13`), `A3E_Radio_Reporting` (list of radio sound classes, default `["RadioAmbient2","RadioAmbient6","RadioAmbient8"]`, `:42`), `A3E_var_ReportTime` (default 10s, `:53`). Preconditions: called as `spawn` (uses `sleep`); a detection trigger just fired.
+- **Outputs:** Sets `A3E_var_PlayerCanBeDetected = false` (`:4`) latching the detection gate closed. Side effects via `remoteExec` to all clients (0): `say3D` radio sound on reporter, `setRandomLip`, and `playmovenow` listening animations. On success calls `A3E_fnc_recordSighting` (which creates a known position). On success/failure/reporter death it `spawn`s a delayed `A3E_fnc_PlayerDetection` to re-arm the triggers. No return value used.
+- **Calls:** `A3E_fnc_GetPlayers` (`:14`), `A3E_fnc_PlayerDetection` (`:18,67,80,96`), `A3E_fnc_recordSighting` (`:63,71`); `say3D`/`setRandomLip`/`playmovenow` via `remoteExec`; `selectRandom`, `knowsAbout`, `getSuppression`, `stance`, `isHidden`, `animationState` (engine).
+- **Called by:** [engine/scheduler] spawned by the trigger statements built in `fn_PlayerDetection.sqf:17,32` (`["EAST"/"GUER"] spawn A3E_FNC_ReportToHQ`). No direct `call` sites — indirect via trigger only.
+- **Processing:** Latch detection off; normalize `_side` string→side object; if no player is known to `_side` above the threshold, sleep 5 and re-arm `PlayerDetection`, exit. Otherwise gather known players and same-side groups. Scan groups × known players; for the first group knowing a player, pick eligible radio-capable units (distance >10, no suppression, and either standing far / hidden). Choose a random reporter, play radio sound + lip + (if on foot) listening animation, count down `_reportTime`; if reporter alive at end → `recordSighting` (and play "out" anim on foot); else report failed → re-arm triggers. `breakTo "main"` after first attempt. If no attempt was made at all, sleep 5 and re-arm.
+- **Theory of operation:** This is the report stage. It converts a raw "AI detected a player" trigger event into a time-gated, cancellable radio call: the reporter must survive the report window for the sighting to register, which lets players suppress/kill the caller to prevent HQ learning their position. On completion it hands off to `recordSighting`→`createKnownPosition` (feeding the known-positions data that `SearchLeader` consumes) and always re-arms `PlayerDetection`.
+- **Whys & questions:** Why the "stupid workaround" switch on side names (`:6-12`)? Because `"resistance"` stringifies to `"GUER"` but the reverse mapping isn't symmetric, so an explicit case table is used. Why the elaborate `_unitsAbleToRadio` filter? To pick a plausible caller (not the one directly in a firefight, not suppressed, standing/hidden). Report window (`A3E_var_ReportTime`) is the counter-play window.
+- **Unresolved issues:** Line `:29` reads `if((_grp knowsAbout ...) >= threshold && {alive _x} count (units _grp)>0)` — operator precedence mixes a boolean with a `count`; this is fragile/likely-buggy (the `&&` binds the `count` expression as its right operand, so it's `bool && (count>0)`, which works but is unclear). `_useAnim` (`:46,51`) is set but never read (dead variable). The single `A3E_var_PlayerCanBeDetected` latch means only one side reports at a time. Deep nesting and `scopeName "main"`/`breakTo` make control flow hard to follow.
+- **Reforger port notes:** No `knowsAbout`, `remoteExec say3D`, `playmovenow`, or `setRandomLip` in Reforger. Port the report as a server-authoritative behavior: on AI-perceives-player, start a timed "calling it in" action (with replicated audio/animation), and if the AI survives the timer, push the sighting into the search system. Replace the string-side workaround with the faction enum.
 
-### a3e_fnc_SearchLeader  —  `Code/functions/SearchLeader/fn_SearchLeader.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_SearchLeader  —  `Code/functions/SearchLeader/fn_SearchLeader.sqf`  ·  _status: documented_
+- **Purpose:** The periodic "brain" of the search subsystem: on each tick it reads the known-position reports, dispatches idle patrols to investigate them, maintains a legacy search-zone marker, and — on cooldown — decides whether to call an artillery or CAS strike on a persistent contact. Also snapshots patrol status.
+- **Inputs:** No params. Reads globals `A3E_KnownPositions` (list of known-position helper objects, `:1`), `A3E_LegacySearchMarker` (`:2`), `A3E_var_MaxInvestigationRange` (default 1300, `:8`), `A3E_var_LastArtilleryStrike` (`:70`), `a3e_var_artillery_cooldown` (default 200, `:71`), `a3e_var_artilleryTimeThreshold` (default 300, `:72`), `a3e_debug_artillery` (`:78`), `A3E_StatusOfPatrols` (`:96`), `drn_searchAreaMarkerName` (marker name, `:24`), sides `A3E_VAR_Side_Ind`/`A3E_VAR_Side_Opfor` (`:6`). Per-known-position object vars: `A3E_LastUpdated`, `A3E_FirstSight`. Per-group vars: `A3E_TaskState` ("IDLE"/"PATROL"/"SAD"), `a3e_homeMarker`.
+- **Outputs:** Orders groups: `A3E_fnc_Patrol` (return SAD groups home), `A3E_fnc_Search` (send a patrol to a known position). Creates/moves the legacy `ELLIPSE` search marker `drn_searchAreaMarkerName` (`:24-29,66`); deletes it when no reports (`:15`). Calls `a3e_fnc_FireArtillery` (`:84`) or `a3e_fnc_CallCAS` (`:87`) and updates `A3E_var_LastArtilleryStrike` (`:91`). Rebuilds and writes `A3E_StatusOfPatrols` (`:115-121`). Radio log via `A3E_fnc_SearchLeaderRadio`.
+- **Calls:** `A3E_fnc_Patrol` (`:13`), `A3E_fnc_SearchLeaderRadio` (`:18,30,49,79`), `A3E_fnc_Search` (`:48`,commented `:107`), `a3e_fnc_FireArtillery` (`:84`), `a3e_fnc_CallCAS` (`:87`); engine `createMarker`, `selectRandom`, `diag_tickTime`, `mapGridPosition`.
+- **Called by:** [engine/scheduler] runs on its own tick trigger created in `fn_SearchLeaderInit.sqf:8` (`[] spawn A3E_fnc_SearchLeader; A3E_var_SearchLeaderTick=false;` reset on deactivation to `A3E_var_SearchLeaderTick=true`), so it re-fires roughly every `A3E_var_SearchleaderInterval`. No direct `call` sites.
+- **Processing:** If no known positions: order all "SAD" groups back to `Patrol`, delete legacy marker, log "No reports." Else: ensure a legacy marker exists at the first known position; if the number of SAD groups ≤ patrol count and there are patrols without a home marker, pick a random known position and send the nearest patrol within `MaxInvestigationRange` via `Search`. Move the legacy marker to the most recently updated known position. Artillery/CAS: if past cooldown, find known positions that have been observed for ≥ `artilleryTimeThreshold` and updated within 60s; if any, 80% chance artillery else CAS on a random one, and reset the strike timestamp. Finally rebuild `A3E_StatusOfPatrols` as `[group, leaderPos, unitCount, false]` for each controlled group.
+- **Theory of operation:** This is the dispatch + escalation stage. It closes the loop opened by `PlayerDetection`/`ReportToHQ`: reports become `A3E_KnownPositions` (via `recordSighting`→`createKnownPosition`), and here those positions are converted into patrol orders and, for stubborn/long-lived contacts, into indirect-fire strikes. Escalation is throttled by a cooldown so strikes are occasional, and only contacts that have persisted long enough (`FirstSight` vs `LastUpdated` spread) qualify.
+- **Whys & questions:** Why "legacy" marker naming (`A3E_LegacySearchMarker`, `drn_searchAreaMarkerName`)? Carried over from the older DRN-era `Code/Scripts/Escape/SearchLeader.sqf` implementation (the xref shows a parallel legacy script). Why 80/20 artillery vs CAS? Tuning choice for variety. Why is the strike success flag ignored (`:90-92` commented)? So the cooldown resets regardless of whether the fire mission actually launched, preventing spam retries.
+- **Unresolved issues:** Large commented-out "lost contact with a group" block (`:97-112`) is dead code (also note the typo `"inve stigate"` in it and at `:108`). `_strikesuccess` is assigned but never read (`:81-88`). `A3E_StatusOfPatrols` is written but the only consumer was the dead block, so it's currently write-only dead data. Magic constants: 60s recency, 80% split, defaults 1300/200/300. `"SAD"`/`"PATROL"`/`"IDLE"` are stringly-typed task states shared with the AI/patrol functions.
+- **Reforger port notes:** Replace the tick-trigger with a scheduled server system tick. Markers → map UI markers or a search-zone entity. `FireArtillery`/`CallCAS` depend on their own subsystems (port separately). Known-position "helper objects" carrying vars should become a plain data record/struct in Enfusion rather than spawned `Land_HelipadEmpty_F` entities.
 
-### a3e_fnc_SearchLeaderInit  —  `Code/functions/SearchLeader/fn_SearchLeaderInit.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_SearchLeaderInit  —  `Code/functions/SearchLeader/fn_SearchLeaderInit.sqf`  ·  _status: documented_
+- **Purpose:** One-time setup that creates the self-repeating "tick" trigger which periodically spawns `A3E_fnc_SearchLeader`, and seeds the initial artillery-strike timestamp so no strike can fire during the first grace period.
+- **Inputs:** No params. Reads global `A3E_var_SearchleaderInterval` (default 30s, `:1`). Precondition: run once at server init.
+- **Outputs:** Sets `A3E_var_SearchLeaderTick = true` (`:7`). Creates one `EmptyDetector` trigger (interval = `_interval/2`, zero area, `["NONE","PRESENT",true]`, repeating) whose statements spawn `SearchLeader` on activation and reset the tick flag on deactivation, giving a self-clocking loop. Sets `A3E_var_LastArtilleryStrike = diag_tickTime + 300` (`:9`) — a 5-min startup grace before strikes are allowed.
+- **Calls:** none directly (leaf); engine `createTrigger`, `setTriggerStatements` (the statement string later spawns `A3E_fnc_SearchLeader`).
+- **Called by:** `Code/functions/Server/fn_initServer.sqf:237` (`[] call A3E_fnc_SearchleaderInit;`). Single caller.
+- **Processing:** Read interval; create a zero-area detector trigger with interval half the search interval; set `A3E_var_SearchLeaderTick=true`; set statements so condition `A3E_var_SearchLeaderTick` runs `[] spawn A3E_fnc_SearchLeader; A3E_var_SearchLeaderTick=false;` on activation and `A3E_var_SearchLeaderTick=true;` on deactivation — the flag toggling produces a repeating tick every full interval. Seed `A3E_var_LastArtilleryStrike` to now+300.
+- **Theory of operation:** Bootstraps the dispatch/escalation stage's clock. Rather than a `while{true} do {sleep}` loop, it abuses a trigger's condition/activation/deactivation edges as a self-resetting timer: activation runs `SearchLeader` and drops the flag; the trigger's own condition then goes false; deactivation raises the flag again, so it re-fires. Half-interval trigger evaluation with flag-driven full-interval firing.
+- **Whys & questions:** Why the flag-toggle trigger pattern instead of a scheduled loop? Likely to avoid a persistent scheduled thread and to piggyback on the trigger engine's throttled evaluation. Why `+300` grace? To keep artillery from firing immediately at mission start before players have had a chance to move. The commented radio-channel code (`:10-11`) is a scrapped OPFOR-comms-channel idea.
+- **Unresolved issues:** Commented-out `radioChannelCreate` (`:10-11`) is abandoned/dead. Interval halving (`_interval/2`) plus flag toggling makes the effective cadence non-obvious. Casing: called as `A3E_fnc_SearchleaderInit` (lowercase l) vs class `SearchLeaderInit` — Arma case-insensitive so harmless.
+- **Reforger port notes:** Replace the trigger-as-timer with a straightforward periodic server update/`GetGame().GetCallqueue().CallLater(...)` scheduling `SearchLeader`. Drop the tick-flag hack. Keep the startup grace as a simple timestamp/timer.
 
-### a3e_fnc_SearchLeaderRadio  —  `Code/functions/SearchLeader/fn_SearchLeaderRadio.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_SearchLeaderRadio  —  `Code/functions/SearchLeader/fn_SearchLeaderRadio.sqf`  ·  _status: documented_
+- **Purpose:** Thin logging wrapper: forwards a search-leader status message to the central logger under the `"SearchLeader"` tag. Used for debug/trace visibility of the search subsystem's decisions.
+- **Inputs:** `params["_message"]` — the string to log (`:1`). No globals read.
+- **Outputs:** Calls `A3E_fnc_Log` with `[_message,["SearchLeader"]]` (`:3`). No return. The commented line (`:4`) would have broadcast to `systemChat` on all clients via `remoteExec` (disabled).
+- **Calls:** `A3E_fnc_Log` (`:3`).
+- **Called by:** `fn_SearchLeader.sqf:18,30,49,79,100,108` (all radio-status messages from the search brain: "No reports.", "Creating legacy searchzone.", "Sending squad ... to investigate report!", artillery-debug, and the two dead-code messages).
+- **Processing:** Read `_message`; call `A3E_fnc_Log` tagged `"SearchLeader"`.
+- **Theory of operation:** Purely observability — not part of the detect/report/dispatch data flow. Centralizes search-leader chatter under one log tag so it can be filtered; the systemChat broadcast is left commented for on-demand in-game debugging.
+- **Whys & questions:** Why a dedicated wrapper rather than calling `A3E_fnc_Log` directly at each site? To fix the `"SearchLeader"` tag in one place and allow toggling the systemChat broadcast globally by editing one file.
+- **Unresolved issues:** The commented systemChat line (`:4`) is the only "real" radio output — despite the name "Radio", this does not play any in-world audio; naming is misleading (it's a log helper). No dead-code bugs otherwise.
+- **Reforger port notes:** Trivial — map to the project's logging facility (`Print`/a logging component) with a "SearchLeader" category. Optional debug on-screen output via a debug UI.
 
-### a3e_fnc_createKnownPosition  —  `Code/functions/SearchLeader/fn_createKnownPosition.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_createKnownPosition  —  `Code/functions/SearchLeader/fn_createKnownPosition.sqf`  ·  _status: documented_
+- **Purpose:** Creates or updates a "known position" record for a reported enemy sighting. Known positions are the shared data structure the `SearchLeader` brain reads to decide where to dispatch patrols and call strikes. Merges nearby sightings into one record instead of spawning duplicates.
+- **Inputs:** `params["_detectedUnitsPosition","_accuracy"]` (`:1`) — the sighting position and an accuracy value (from `targetKnowledge`). Reads globals `a3e_var_knownPositionHelperObject` (default `"Land_HelipadEmpty_F"`, `:3`), `a3e_var_knownPositionMinDistance` (default 100m merge radius, `:4`), `A3E_KnownPositions` (`:7`).
+- **Outputs:** Either creates a new helper object at the position (via `createVehicle`) and initializes its vars, or updates the nearest existing one within the merge radius. Sets object vars (all `public`/broadcast): `A3E_LastUpdated`, `A3E_Accuracy`, `A3E_FirstSight` (new only), `A3E_NumOfReports` (incremented on update). New records `spawn A3E_fnc_watchKnownPosition`. Note: does NOT itself push to `A3E_KnownPositions` — see Unresolved.
+- **Calls:** `A3E_fnc_watchKnownPosition` (`:17`, spawned; commented `a3e_fnc_OrderSearch` `:18`); engine `createVehicle`, `setVariable ... true` (public), `getVariable`.
+- **Called by:** `Code/functions/SearchLeader/fn_recordSighting.sqf:4` (`[(_knowledge select 6),(_knowledge select 5)] call A3E_fnc_CreateKnownPosition;`). Single caller in this subsystem (via `recordSighting`).
+- **Processing:** Read merge distance; find existing known positions within `knownPositionMinDistance` of the sighting. If none: `createVehicle` a helper object at the position, set `A3E_LastUpdated`/`A3E_Accuracy`/`A3E_FirstSight`=now, `A3E_NumOfReports`=1, and spawn `watchKnownPosition` to monitor it. If one exists: move it to the new position, refresh `A3E_LastUpdated`/`A3E_Accuracy`, increment `A3E_NumOfReports`.
+- **Theory of operation:** This is the data-recording stage bridging report→dispatch. It maintains the `A3E_KnownPositions` world as a set of physical marker-objects each carrying sighting metadata (first seen, last updated, report count, accuracy). The 100m merge prevents one contact from producing a swarm of records; `FirstSight` vs `LastUpdated` spread is later used by `SearchLeader` to gate artillery (persistent contacts only). `watchKnownPosition` presumably expires stale records.
+- **Whys & questions:** Why represent known positions as spawned `Land_HelipadEmpty_F` objects rather than an array of data? So they have real world positions, can be `setPos`-moved, carry per-object `setVariable` state, and be found by `distance`/`nearestObjects` — an idiomatic (if heavy) SQF pattern. Who adds them to `A3E_KnownPositions`? Almost certainly `A3E_fnc_watchKnownPosition` (registration + lifecycle), not this function.
+- **Unresolved issues:** This function never writes `A3E_KnownPositions` itself — it relies on `watchKnownPosition` to register the object into that list (verify in the Common/AI docs). `_firstsight` (`:26`) is read into an undeclared (global-leaking, no `private`) variable and then unused — dead/leaky. Magic index schema: the caller passes `targetKnowledge select 6` (position) and `select 5` (accuracy) as `[_detectedUnitsPosition,_accuracy]`. Casing: `A3E_fnc_CreateKnownPosition` vs class `CreateKnownPosition`.
+- **Reforger port notes:** Replace helper-object records with a lightweight tracked data class/struct held in a server-side manager list (position, firstSeen, lastUpdated, reportCount, accuracy). Merge-by-distance and staleness expiry become plain list operations. Drop the spawned-entity approach.
 
-### a3e_fnc_onPlayerSpotted  —  `Code/functions/SearchLeader/fn_onPlayerSpotted.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_onPlayerSpotted  —  `Code/functions/SearchLeader/fn_onPlayerSpotted.sqf`  ·  _status: documented_
+- **Purpose:** Declared but EMPTY. The source file is 0 bytes (confirmed by byte count) — there is no code. It is registered as a `CfgFunctions` entry (`functions.hpp:268`, class `onPlayerSpotted`) but implements nothing. Presumably a stub/placeholder for a spotted-callback that was never written or was gutted.
+- **Inputs:** None (no code).
+- **Outputs:** None (no code). Calling it is a no-op.
+- **Calls:** none (empty file).
+- **Called by:** No `A3E_fnc_onPlayerSpotted` references found anywhere in `Code/` (xref `## SearchLeader` marks it "no `fnc_` references found - entry point or dead code; verify"). Confirmed via grep: only the `functions.hpp` class declaration exists, no call sites. Dead/unused.
+- **Processing:** None — empty file.
+- **Theory of operation:** Not part of the live detect→report→dispatch→escalate flow. The name suggests it was intended as a hook fired when a player is spotted (parallel to `ReportToHQ`/`recordSighting`), but the current pipeline routes detection through `PlayerDetection`→`ReportToHQ`→`recordSighting`→`createKnownPosition` instead. This function is vestigial.
+- **Whys & questions:** Why keep a registered-but-empty function? Likely a leftover placeholder from refactoring the detection pipeline (the legacy `Code/Scripts/Escape/SearchLeader.sqf` had inline spotted handling). Safe to delete along with its `functions.hpp` entry unless something plans to fill it.
+- **Unresolved issues:** DEAD CODE — empty file with a live `CfgFunctions` registration. Candidate for removal. No behavior, no callers.
+- **Reforger port notes:** Do not port. If a "player spotted" event is desired in Reforger, implement it fresh as an event/callback on the perception system rather than resurrecting this empty stub.
 
-### a3e_fnc_recordSighting  —  `Code/functions/SearchLeader/fn_recordSighting.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_recordSighting  —  `Code/functions/SearchLeader/fn_recordSighting.sqf`  ·  _status: documented_
+- **Purpose:** Turns a successful report ("reporter now confirms reported") into a known-position record by extracting the reporter's target knowledge of the reported unit and feeding position+accuracy to `createKnownPosition`, then re-arms the detection triggers after a delay.
+- **Inputs:** `params["_reporter","_reported"]` (`:1`) — the AI who reported, and the enemy/player they reported. No globals read directly.
+- **Outputs:** Calls `A3E_fnc_CreateKnownPosition` with `[(_knowledge select 6),(_knowledge select 5)]` — the position and accuracy fields of `_reporter targetKnowledge _reported` (`:3-4`). Spawns a delayed (60s) re-arm of `A3E_fnc_PlayerDetection` (`:5-8`). No return.
+- **Calls:** `A3E_fnc_CreateKnownPosition` (`:4`), `A3E_fnc_PlayerDetection` (`:7`, spawned after 60s); engine `targetKnowledge`.
+- **Called by:** `fn_ReportToHQ.sqf:63,71` (on successful report). Also called from outside this subsystem: `Code/functions/AI/fn_onEnemyDetected.sqf:50,54` and `Code/functions/Spawning/fn_onCivilianGroupSpawn.sqf:51,55` — i.e. AI direct-detection and civilian informants also record sightings through the same entry point.
+- **Processing:** Read `_reporter`/`_reported`; query `_reporter targetKnowledge _reported` (returns an array where index 6 is the known position and index 5 the accuracy/positionAccuracy); pass those to `createKnownPosition`; spawn a thread that sleeps 60s then re-calls `PlayerDetection` to reopen the detection gate.
+- **Theory of operation:** The recording stage's public entry point. Whereas `ReportToHQ` handles the radio-report choreography, `recordSighting` is the small, reusable step that any "an AI/civilian now knows where an enemy is" path funnels through to add a known position. The 60s re-arm delay throttles how often a fresh report can start after one lands, pacing the whole detection loop.
+- **Whys & questions:** Why re-arm `PlayerDetection` here as well as in `ReportToHQ`? Because `recordSighting` is also invoked from the AI-detection and civilian paths, which don't otherwise re-open the detection gate — so it centralizes the re-arm. Why the `targetKnowledge` indices 5/6? Those are Arma's documented `targetKnowledge` return fields (accuracy/positionAccuracy and known position); this is a magic-index dependency on the engine's array schema.
+- **Unresolved issues:** Magic-index schema `_knowledge select 6`/`select 5` — brittle if the engine's `targetKnowledge` layout is misremembered (verify indices: BIS docs list [known, side/reason, unit knowledge..., accuracy, position]). The 60s re-arm is duplicated logic with `ReportToHQ`. Casing: `A3E_fnc_CreateKnownPosition` / `A3E_fnc_recordSighting`.
+- **Reforger port notes:** Replace `targetKnowledge` with Reforger's AI target/threat perception query (get last-known position + confidence for a target). Keep this as the single funnel that pushes a sighting into the known-positions manager; drop the manual re-arm once detection is a managed system.
 
 ## Revision History
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton (10-field entry stubs, no analysis) |
+| 2026-07-01 | Claude | Documented all entries |

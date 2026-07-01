@@ -85,6 +85,26 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** low · **candidate — verify**
 - **Repro / context:** `Code/functions/AI/fn_FireArtillery.sqf` — an inclusive `for … from 0 to _artilleryRounds` fires `_artilleryRounds+1` shells. `Code/functions/AI/fn_CallCAS.sqf` returns a hard-coded `true` regardless of outcome.
 
+## BUG-019 — `onCivilianGroupSpawn` attaches event handlers to undefined `_group`
+- **Status:** open · **Severity:** high · **confirmed**
+- **Repro / context:** `Code/functions/Spawning/fn_onCivilianGroupSpawn.sqf` — param is `_grp` (`:1`), but the `EnemyDetected` and `KnowsAboutChanged` `addEventHandler` calls target `_group` (`:6,:8`), which is undefined. The civilian detection/reporting handlers likely fail to register. Same `_group`/`_grp` family as BUG-014.
+
+## BUG-020 — `populateVillageZone` large-village branch never fires + debug spam
+- **Status:** open · **Severity:** medium · **confirmed**
+- **Repro / context:** `Code/functions/Spawning/fn_populateVillageZone.sqf:8` tests `_zoneArea`, but the value read is `_area` (`:5`); `_zoneArea` is undefined so the ">5000 ⇒ add Opfor" branch never runs. Also leftover `systemchat str _patrolCount` (`:37`) broadcasts to all clients.
+
+## BUG-021 — Undefined-variable cluster in Spawning zone/spawn functions (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `populateLocationZone.sqf:32` uses `_x` (should be `_marker`) in `getBuildingsInMarker` and computes an unused `_guardCount` (`:36`); `initPatrolZone.sqf:31-34` index `_x select 0..3` with `_x` undefined (should be `_shape`); `findSpawnPosBuilding.sqf:156` references undefined `_site`/`_newGrp`. Same undefined-local pattern as BUG-014/019.
+
+## BUG-022 — `StartSession` duplicates the `server=` query param
+- **Status:** open · **Severity:** low · **confirmed**
+- **Repro / context:** `Code/functions/Statistics/fn_StartSession.sqf:30` and `:32` both append `&server=<name>` to the stats URL (copy-paste).
+
+## BUG-023 — `ReportToHQ` mixes boolean and count in one condition (candidate)
+- **Status:** open · **Severity:** low · **candidate — verify**
+- **Repro / context:** `Code/functions/SearchLeader/fn_ReportToHQ.sqf:29` — an `&&` combines `(_grp knowsAbout …) >= threshold` with `{alive _x} count (units _grp) > 0`; verify precedence yields the intended "knows enough AND has living units".
+
 ---
 
 _Format for new entries:_
@@ -104,3 +124,4 @@ _Format for new entries:_
 | 2026-06-30 | Claude | Logged BUG-001…008 from code-reference Sprint 1 |
 | 2026-07-01 | Claude | Added BUG-009…013 from code-reference Sprint 2 (Common) |
 | 2026-07-01 | Claude | Added BUG-014…018 from code-reference Sprint 3 (AI) |
+| 2026-07-01 | Claude | Added BUG-019…023 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |

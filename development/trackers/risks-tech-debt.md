@@ -95,6 +95,35 @@ before/into the port. _(Sprint 3.)_
 group per gunner (risking the 288-group engine limit); `RandomPatrolRoute` uses global (non-per-group)
 debug-marker vars. _(Sprint 3.)_
 
+## RD-017 — Spawning duplication & dead code
+**Severity:** low · **Status:** open
+`AmbientPatrols`/`CivilianCommuters`/`MilitaryTraffic` share near-identical cleanup+capped-spawn boilerplate
+and copy-paste log tags (`CivilianCommuters` logs "Military Traffic created"). `getDynamicSquadsize` reads
+`A3E_Param_DynamicGroupSizeMultiplier` but never applies it (dead multiplier), and its filename casing differs
+from call sites; may overlap Common `GetEnemyCount`. `onEnemySoldierSpawn` has an empty silencer branch and
+unused locals. _(Sprint 4.)_
+
+## RD-018 — Two coexisting zone/spawn frameworks + possible duplicate traffic
+**Severity:** medium · **Status:** open
+A legacy `a3e_patrolZones` + BIS-pairs API (`initPatrolZone`/`activatePatrolZone`/`deactivatePatrolZone`)
+coexists with the newer `A3E_Zones` HashMap framework (`initZone`/`populateLocationZone`/`populateVillageZone`).
+`initServer` also spawns a DRN `MilitaryTraffic` alongside the Spawning one — possible duplicate systems.
+Determine which is authoritative before porting. See Q-015. _(Sprint 4.)_
+
+## RD-019 — SearchLeader dead/legacy residue
+**Severity:** low · **Status:** open
+`fn_onPlayerSpotted.sqf` is a 0-byte registered-but-empty function (`functions.hpp:268`); `fn_SearchLeader.sqf`
+has a large commented-out "lost contact" block and writes `A3E_StatusOfPatrols` that nothing reads (write-only
+dead data); `_strikesuccess` is assigned but unread; `SearchLeaderRadio` only logs (misnamed); a parallel legacy
+`Code/Scripts/Escape/SearchLeader.sqf` still exists. Confirm the authoritative copy before porting. _(Sprint 4.)_
+
+## RD-020 — Statistics: fragile external-API integration
+**Severity:** medium · **Status:** open
+External stats use a fire-and-forget `htmlLoad` on a hidden `RscHTML` control (no real HTTP client, no
+error/retry handling) — may silently no-op on headless servers (see Q-016). `PingStatistics` is dead, targets a
+legacy host, is NOT gated by the `A3E_Param_SendStatistics` opt-in, and injects an unescaped `serverName` into a
+URL. `Save`/`Parse` statistics couple to a positional-tuple record schema with no shared definition. _(Sprint 4.)_
+
 ---
 
 _Format for new entries:_
@@ -112,3 +141,4 @@ _Format for new entries:_
 | 2026-06-30 | Claude | Added RD-006…009 from code-reference Sprint 1 |
 | 2026-07-01 | Claude | Added RD-010…013 from code-reference Sprint 2 (Common) |
 | 2026-07-01 | Claude | Added RD-014…016 from code-reference Sprint 3 (AI) |
+| 2026-07-01 | Claude | Added RD-017…020 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |

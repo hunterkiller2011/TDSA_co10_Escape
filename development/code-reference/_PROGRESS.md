@@ -20,7 +20,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | 1 | Helper, Garrison, Zones, Chronos, Intel, ace, Debug | 40 | **done** (awaiting review) |
 | 2 | Common | 35 | **done** |
 | 3 | AI | 32 | **done** |
-| 4 | Spawning, SearchLeader, Statistics | 36 | pending |
+| 4 | Spawning, SearchLeader, Statistics | 36 | **done** |
 | 5 | Server, _init-and-includes | 38 | pending |
 | 6 | DRN | 20 | pending |
 | 7 | Templates (dedupe variants) | 45 | pending |
@@ -38,9 +38,9 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | Debug | [Debug.md](Debug.md) | 11 | done |
 | Common | [Common.md](Common.md) | 35 | done |
 | AI | [AI.md](AI.md) | 32 | done |
-| Spawning | [Spawning.md](Spawning.md) | 20 | pending |
-| SearchLeader | [SearchLeader.md](SearchLeader.md) | 8 | pending |
-| Statistics | [Statistics.md](Statistics.md) | 8 | pending |
+| Spawning | [Spawning.md](Spawning.md) | 20 | done |
+| SearchLeader | [SearchLeader.md](SearchLeader.md) | 8 | done |
+| Statistics | [Statistics.md](Statistics.md) | 8 | done |
 | Server | [Server.md](Server.md) | 30 | pending |
 | _init & includes | [_init-and-includes.md](_init-and-includes.md) | 8 | pending |
 | DRN | [DRN.md](DRN.md) | 20 | pending |
@@ -95,6 +95,8 @@ concurrent edits.
 - RD/off-by-one (`FireArtillery`): `for "_i" from 0 to _artilleryRounds` fires rounds+1 shells (inclusive loop). `_success`/return of `CallCAS` is hard-coded `true` regardless of actual strike outcome.
 - RD/perf (`OrderSearch`, `EngageReportedGroup`): iterate `AllGroups` per report; `EngageReportedGroup` has a dead `if(isNil("_group"))` check and unbounded accuracy growth until the 300s cutoff.
 
+**Sprint 4 intake (Spawning/SearchLeader/Statistics)** — folded into `bugs-app.md` BUG-019…023, `risks-tech-debt.md` RD-017…020, `open-questions.md` Q-015…017; privacy facts → `docs/security-privacy.md`. Confirmed by hand: `onCivilianGroupSpawn` `_group` typo (EHs don't register), `populateVillageZone` `_zoneArea` undefined, `onPlayerSpotted` 0-byte empty, `StartSession` duplicate `server=`.
+
 ## Revision History
 
 | Date | Author | Change |
@@ -102,4 +104,5 @@ concurrent edits.
 | 2026-06-30 | Peter | Created; Sprint 0 setup complete; Sprint 1 started |
 | 2026-07-01 | Claude | Sprint 2 (Common, 35) documented; findings folded into trackers |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; findings folded into trackers |
+| 2026-07-01 | Claude | Sprint 4 (Spawning/SearchLeader/Statistics, 36) documented; findings folded; security-privacy updated |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |
