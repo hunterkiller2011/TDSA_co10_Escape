@@ -93,9 +93,9 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** medium · **confirmed**
 - **Repro / context:** `Code/functions/Spawning/fn_populateVillageZone.sqf:8` tests `_zoneArea`, but the value read is `_area` (`:5`); `_zoneArea` is undefined so the ">5000 ⇒ add Opfor" branch never runs. Also leftover `systemchat str _patrolCount` (`:37`) broadcasts to all clients.
 
-## BUG-021 — Undefined-variable cluster in Spawning zone/spawn functions (candidate)
-- **Status:** open · **Severity:** medium · **candidate — verify**
-- **Repro / context:** `populateLocationZone.sqf:32` uses `_x` (should be `_marker`) in `getBuildingsInMarker` and computes an unused `_guardCount` (`:36`); `initPatrolZone.sqf:31-34` index `_x select 0..3` with `_x` undefined (should be `_shape`); `findSpawnPosBuilding.sqf:156` references undefined `_site`/`_newGrp`. Same undefined-local pattern as BUG-014/019.
+## BUG-021 — Undefined-variable cluster in Spawning zone/spawn functions
+- **Status:** open · **Severity:** medium · **confirmed** (populateLocationZone, initPatrolZone) / candidate (findSpawnPosBuilding)
+- **Repro / context:** Verified each `_x` is at **top-level function scope, outside any `forEach`/`count`/`select`**, so it is genuinely nil (not the SQF magic iterator): `populateLocationZone.sqf:32` passes `_x` to `getBuildingsInMarker` where the zone marker `_marker` (`:4`) was intended (also computes an unused `_guardCount` at `:36`); `initPatrolZone.sqf:31-34` index `_x select 0..3` for marker setup where the `_shape` param tuple (`:16`, cf. `:18-21`) was intended. `findSpawnPosBuilding.sqf:156` references undefined `_site`/`_newGrp` (candidate — not re-verified). Same undefined-local family as BUG-014/019.
 
 ## BUG-022 — `StartSession` duplicates the `server=` query param
 - **Status:** open · **Severity:** low · **confirmed**

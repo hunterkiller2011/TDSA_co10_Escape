@@ -23,6 +23,17 @@ problem, also log it in the trackers and link the ID back here:
 > casing from file names — confirm the exact name against [`Code/include/functions.hpp`](../../Code/include/functions.hpp)
 > when documenting. The **path** on each heading line is authoritative.
 
+> **SQF reviewer caveats** (do NOT flag these as bugs):
+> - **Magic variables** are auto-bound by the engine and are *not* undefined inside their constructs:
+>   `_x` / `_y` / `_forEachIndex` (in `forEach`/`count`/`select`/`apply`/`findIf`), `_this` (params, `call`,
+>   event handlers), `this` / `thisList` / `thisTrigger` (triggers), `_exception` (`catch`), `_thisScript`,
+>   `_fnc_scriptName`. Only flag one if it is used **outside** any such construct — always check the
+>   enclosing scope first (an `_x` at top-level function scope with no surrounding iterator *is* a real
+>   defect; an `_x` inside a `forEach` block is correct).
+> - **Case-insensitivity:** function/command names are case-insensitive (`a3e_fnc_Foo` == `A3E_FNC_FOO`);
+>   casing mismatches are style noise (tracked as RD-008), not bugs.
+> - Verify any suspected undefined variable against its enclosing scope before recording it as a bug.
+
 ## Entry template
 
 Each entry uses these fields:
