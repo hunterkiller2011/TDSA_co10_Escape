@@ -70,6 +70,17 @@ visible to clients — verify the debug village markers appear anywhere. Its `[t
 presence, not value) — may misfire if defined-but-false. It is registered server-side (initPlayer) whereas
 `handleRating` is client-side (initLocalPlayer) — intentional asymmetry? _(Surfaced Sprint 2.)_
 
+## Q-013 — `a3e_fnc_move` waypoint convention (port choke-point)
+**Status:** open
+All AI behaviors reuse waypoint index 1 and embed self-respawn recursion inside the waypoint's oncomplete
+string — fragile if extra waypoints exist, and a key rework point for Enfusion (different waypoint API).
+Also `Guard`/`Search` set `setWaypointTimeout [0,20,6]` (max < mid) — looks like a min/mid/max typo. _(Surfaced Sprint 3.)_
+
+## Q-014 — Aquatic patrols share the foot-patrol state tag
+**Status:** open
+`fn_AquaticPatrol.sqf` tags boat groups with state `"PATROL"`, the same tag as foot patrols — verify
+`OrderSearch`/`SeekShelter` and other consumers don't mis-treat boats as infantry. _(Surfaced Sprint 3.)_
+
 ---
 
 _Format for new entries:_
@@ -86,3 +97,4 @@ _Format for new entries:_
 | 2026-06-30 | Peter | Initial skeleton; seeded Q-001…Q-008 (conversion unknowns) |
 | 2026-06-30 | Claude | Added Q-009, Q-010 from code-reference Sprint 1 |
 | 2026-07-01 | Claude | Added Q-011, Q-012 from code-reference Sprint 2 (Common) |
+| 2026-07-01 | Claude | Added Q-013, Q-014 from code-reference Sprint 3 (AI) |

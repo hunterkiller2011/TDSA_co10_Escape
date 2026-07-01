@@ -19,7 +19,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 |--------|-----------|---------|--------|
 | 1 | Helper, Garrison, Zones, Chronos, Intel, ace, Debug | 40 | **done** (awaiting review) |
 | 2 | Common | 35 | **done** |
-| 3 | AI | 32 | pending |
+| 3 | AI | 32 | **done** |
 | 4 | Spawning, SearchLeader, Statistics | 36 | pending |
 | 5 | Server, _init-and-includes | 38 | pending |
 | 6 | DRN | 20 | pending |
@@ -37,7 +37,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | ace | [ace.md](ace.md) | 4 | done |
 | Debug | [Debug.md](Debug.md) | 11 | done |
 | Common | [Common.md](Common.md) | 35 | done |
-| AI | [AI.md](AI.md) | 32 | pending |
+| AI | [AI.md](AI.md) | 32 | done |
 | Spawning | [Spawning.md](Spawning.md) | 20 | pending |
 | SearchLeader | [SearchLeader.md](SearchLeader.md) | 8 | pending |
 | Statistics | [Statistics.md](Statistics.md) | 8 | pending |
@@ -78,9 +78,28 @@ concurrent edits.
 - Q (`bootstrapEscape`): uses `throw` on missing config inside a postInit function — verify the throw is caught / that the mission fails visibly rather than silently.
 - Q (`handleScore`): gates on `!isNil "a3e_var_Escape_SearchLeader_civilianReporting"` (presence of the var) rather than its boolean value — may misfire if the var is defined-but-false. Also registered on server (initPlayer) whereas `handleRating` is registered client-side (initLocalPlayer) — intentional asymmetry?
 
+**Sprint 3 intake (AI)** — folded into `bugs-app.md` BUG-014…018, `risks-tech-debt.md` RD-014…016, `open-questions.md` Q-013…014:
+- BUG-candidate (`onEnemyDetected`): references `_player` throughout (guards `isPlayer _player`, filters, and `A3E_fnc_recordSighting`) but `_player` is never defined in the function — only `_grp`/`_newTarget` are params. Almost certainly should be `_newTarget`; as written the civilian-reporting path likely errors or reads an unintended global. Also the `EnemyDetected` handler is wired for BOTH civilian and enemy groups (`onCivilianGroupSpawn`, `onEnemyGroupSpawn`) but the body only acts for `side == civilian`, so enemy detections are a no-op beyond logging.
+- BUG-candidate (`SeekShelter`): file is empty (0 bytes) yet is `call`ed from `Zones/fn_DeserializeZoneGroups.sqf:91` for groups deserialized into a shelter state — those groups receive no orders on load (silent behavior gap). Verify which saved state maps here.
+- BUG-candidate (`ExtractionBoat` naming/dead-code): `Server/fn_RunExtractionBoat.sqf:41-42` spawns `A3E_fnc_ExtractionCar` (not `ExtractionBoat`) for its boats; `fn_ExtractionBoat.sqf` has no indexed callers and may be orphaned. Function-name vs runner-name mismatch is a maintenance trap.
+- BUG-candidate (`Stroll`): markerless path never assigns `_destinationPos` before the `a3e_fnc_move` call (Patrol handles this branch; Stroll does not) — possible undefined-variable use if called with no marker and none stored.
+- RD/duplication (extraction variants): `ExtractionBoat`/`ExtractionCar`/`ExtractionChopper` are near-identical `State`-var polling state machines (differ only in approach thresholds and heli `flyInHeight`). Two runner pairs also overlap (`RunExtraction`+`RunExtractionHeli` → Chopper; `RunExtractionBoat`+`RunExtractionCar` → Car). Consolidation candidate.
+- RD/duplication (building-garrison variants): `GuardBuilding`/`Occupy`/`PatrolBuildings` share one skeleton (differ in formation, state string, timeout, and respawn target Guard/Stroll/Patrol). Likewise `Patrol`/`Guard`/`Stroll`/`AquaticPatrol` share the marker+water random-pos skeleton. Strong dedup candidates.
+- RD/duplication (flee scatter): the "scatter nearby Opfor/Ind away from impact" block is copy-pasted between `fn_CallCAS` and `fn_FireArtillery`.
+- RD/duplication (aerial drones): `fn_SearchDrone` and `fn_LeafletDrone` are the same Engima Search-Chopper state machine; only the SEARCHING state (SAD vs leaflet drop) differs. Both use `player sideChat` for debug in a server-side script and depend on legacy DRN CommonLib.
+- RD/dead-code: `fn_Loiter.sqf` and `fn_resumeTask.sqf` are empty (0 bytes); `fn_RandomPatrolRoute` only caller is commented out (`DRN/fn_PopulateLocation.sqf:62`); `fn_spawnGarisson` has no indexed callers and uses the legacy `A3E_GroupMembers`/`A3E_Sides` index model. Candidates to confirm-and-prune (check `functions.hpp`).
+- Q (waypoint-timeout ordering): `Guard` uses `setWaypointTimeout [0,20,6]` and `Search` `[0,20,6]` — max(6) < mid(20), which looks like a min/mid/max typo (should be `[0,6,20]`?). Confirm intended dwell behavior.
+- Q (`a3e_fnc_move` waypoint-1 convention): every behavior reuses waypoint index 1 and stores its self-respawn recursion in the oncomplete statement; this convention is fragile if any code adds extra waypoints. Confirm no group ever gets additional waypoints. Also the key Reforger port choke-point (Enfusion has no equivalent index/`setWaypointType` model).
+- Q (`AquaticPatrol` state): boats are tagged task state `"PATROL"` (same as foot patrols) rather than a distinct state — verify this doesn't cause OrderSearch/SeekShelter to mis-treat boats.
+- Q (`AddStaticGunner`): creates a new group per static gunner (many statics → group bloat toward the 288-group limit); default side is `A3E_VAR_Side_Ind` though callers pass Opfor; Opfor `switch` case is redundant.
+- RD/off-by-one (`FireArtillery`): `for "_i" from 0 to _artilleryRounds` fires rounds+1 shells (inclusive loop). `_success`/return of `CallCAS` is hard-coded `true` regardless of actual strike outcome.
+- RD/perf (`OrderSearch`, `EngageReportedGroup`): iterate `AllGroups` per report; `EngageReportedGroup` has a dead `if(isNil("_group"))` check and unbounded accuracy growth until the 300s cutoff.
+
 ## Revision History
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-30 | Peter | Created; Sprint 0 setup complete; Sprint 1 started |
 | 2026-07-01 | Claude | Sprint 2 (Common, 35) documented; findings folded into trackers |
+| 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; findings folded into trackers |
+| 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |

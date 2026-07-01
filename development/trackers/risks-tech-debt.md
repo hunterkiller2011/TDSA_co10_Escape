@@ -76,6 +76,25 @@ restored); `initArsenal` does a full `CfgWeapons` scan per box. _(Sprint 2.)_
 `getAssocArrayEntry` uses parallel arrays with a `[]` not-found sentinel (ambiguous) while `loadLocalClasses`
 uses modern HashMaps — inconsistent idioms across Common. _(Sprint 2.)_
 
+## RD-014 — AI dead-code / empty placeholders
+**Severity:** low · **Status:** open
+Empty (0-byte) `fn_Loiter.sqf` and `fn_resumeTask.sqf` (dead placeholders); `fn_RandomPatrolRoute.sqf`
+(its only caller is commented out); `fn_spawnGarisson.sqf` (no callers; legacy side-index model). Confirm
+vs `functions.hpp` and prune. (Empty `fn_SeekShelter.sqf` is a *bug* — BUG-015 — because it is called.) _(Sprint 3.)_
+
+## RD-015 — Heavy behavior duplication in AI
+**Severity:** medium · **Status:** open
+Near-parallel state machines: `ExtractionBoat/Car/Chopper`; `GuardBuilding/Occupy/PatrolBuildings`
+(building-garrison); `Patrol/Guard/Stroll/AquaticPatrol` (marker/water); a flee-scatter block copy-pasted
+between `CallCAS`↔`FireArtillery`; `SearchDrone`↔`LeafletDrone` (same drone state machine). Consolidate
+before/into the port. _(Sprint 3.)_
+
+## RD-016 — AI scaling / perf
+**Severity:** low-medium · **Status:** open
+`OrderSearch` and `EngageReportedGroup` iterate `allGroups` per report; `AddStaticGunner` creates a new
+group per gunner (risking the 288-group engine limit); `RandomPatrolRoute` uses global (non-per-group)
+debug-marker vars. _(Sprint 3.)_
+
 ---
 
 _Format for new entries:_
@@ -92,3 +111,4 @@ _Format for new entries:_
 | 2026-06-30 | Peter | Initial skeleton; seeded RD-001…RD-005 |
 | 2026-06-30 | Claude | Added RD-006…009 from code-reference Sprint 1 |
 | 2026-07-01 | Claude | Added RD-010…013 from code-reference Sprint 2 (Common) |
+| 2026-07-01 | Claude | Added RD-014…016 from code-reference Sprint 3 (AI) |

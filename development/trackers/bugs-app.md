@@ -64,6 +64,27 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** medium · **candidate — verify**
 - **Repro / context:** `Code/functions/Common/fn_healAtBuilding.sqf` — `setDamage 0` likely bypasses ACE Medical wound tracking (inconsistent state under ACE); no cooldown/limit.
 
+## BUG-014 — `onEnemyDetected` uses undefined `_player`
+- **Status:** open · **Severity:** high · **confirmed**
+- **Repro / context:** `Code/functions/AI/fn_onEnemyDetected.sqf` — params are `_grp, _newTarget` (`:1`), but the civilian-reporting branch uses `_player` at `:15,19,23,50,54`, which is never defined in that scope (should be `_newTarget`). The civilian "radio-in a sighting" path therefore acts on an undefined variable — civilian reporting is effectively broken.
+- **Notes:** The `EnemyDetected` handler is also attached to enemy groups, but the body only acts when `side _grp == civilian`, so enemy detections are log-only.
+
+## BUG-015 — `SeekShelter` is empty but is called
+- **Status:** open · **Severity:** medium · **confirmed**
+- **Repro / context:** `Code/functions/AI/fn_SeekShelter.sqf` is 0 bytes, yet `Code/functions/Zones/fn_DeserializeZoneGroups.sqf:91` does `[_grp] call A3E_FNC_SeekShelter`. Groups deserialized into a "shelter" state receive no orders (silent no-op). Implement or reroute.
+
+## BUG-016 — Extraction-boat runner spawns the car behavior
+- **Status:** open · **Severity:** medium · **confirmed**
+- **Repro / context:** `Code/functions/Server/fn_RunExtractionBoat.sqf:41-42` spawns `A3E_fnc_ExtractionCar` (passing the boats), while `Code/functions/AI/fn_ExtractionBoat.sqf` has no callers (orphaned). Either the boat behavior was abandoned in favor of reusing the car state machine, or this is a wrong-function bug. Verify intent.
+
+## BUG-017 — `Stroll` markerless path leaves `_destinationPos` unset (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Code/functions/AI/fn_Stroll.sqf` — the no-marker branch calls `a3e_fnc_move` without first setting `_destinationPos` (unlike `fn_Patrol.sqf`), risking an undefined-variable use.
+
+## BUG-018 — `FireArtillery` fires one extra round; `CallCAS` always returns true (candidate)
+- **Status:** open · **Severity:** low · **candidate — verify**
+- **Repro / context:** `Code/functions/AI/fn_FireArtillery.sqf` — an inclusive `for … from 0 to _artilleryRounds` fires `_artilleryRounds+1` shells. `Code/functions/AI/fn_CallCAS.sqf` returns a hard-coded `true` regardless of outcome.
+
 ---
 
 _Format for new entries:_
@@ -82,3 +103,4 @@ _Format for new entries:_
 | 2026-06-30 | Peter | Initial skeleton |
 | 2026-06-30 | Claude | Logged BUG-001…008 from code-reference Sprint 1 |
 | 2026-07-01 | Claude | Added BUG-009…013 from code-reference Sprint 2 (Common) |
+| 2026-07-01 | Claude | Added BUG-014…018 from code-reference Sprint 3 (AI) |
