@@ -170,6 +170,35 @@ uncompiled build ships garbage version/build metadata. Both matter when standing
 Also hard-depends on an external CommonLib (`drn_fnc_CL_*`) and uses magic-index soldier schemas that differ
 from the A3E ones. _(Sprint 6.)_
 
+## RD-026 — Template compositions: duplication + no cleanup
+**Severity:** medium · **Status:** open
+The composition families (Prison, AmmoDepot, ComCenter, MotorPool, MortarSite) are Map-Builder-exported scripts
+with massive copy-paste (loot-fill loops, placement helpers repeated across ~40 files) and **no cleanup** — every
+object/box/flag/gunner/vehicle is `createVehicle`'d and never tracked or despawned, so a mission with N ammo
+depots + com centers + motor pools + mortars accumulates persistent entities that are never removed (even when an
+objective is neutralized). Prime port target: one data-driven builder per type + lifecycle-tracked entities. _(Sprint 7.)_
+
+## RD-027 — Dead / duplicate template compositions
+**Severity:** low · **Status:** open
+The 6 `fn_Roadblock*` composition functions have **no callers** — the live roadblocks use the Iso data-template
+system instead (`A3E_RoadblockTemplates` = `rb_bis_rb*` → `fn_LoadTemplates` → `A3E_fnc_IsoTemplateRestore` →
+`Server/fn_RoadBlocks.sqf` spawns guards/statics). `fn_Roadblock*` are orphaned source the `rb_*` data files were
+derived from. Also `fn_MortarSite2.sqf` is a byte-for-byte copy of `fn_MortarSite.sqf`. Prune. _(Sprint 7.)_
+
+## RD-028 — Template registration & mod-classname coupling
+**Severity:** low · **Status:** open
+The `A3E_*Templates` selection arrays are set per-mod in `Mods/{Mod}/UnitClasses.sqf` (with hardcoded defaults in
+the `Server/fn_create*.sqf` functions), **not** in `fn_LoadTemplates.sqf`. The `_spe*`/`_vn*`/`_ger*` variants
+hardcode mod-specific classnames (`SPE_*`, `Land_vn_*`, `vn_*`) that would error if selected under a mismatched mod
+— safe only because each is registered exclusively in its mod's UnitClasses. Two template mechanisms coexist
+(function-compositions vs Iso data-templates); unify for the port. _(Sprint 7.)_
+
+## RD-029 — Shipped dev/debug residue in templates
+**Severity:** low · **Status:** open
+`fn_isoTemplateStore.sqf` is a dev-only authoring tool (`copyToClipboard`/`systemChat`, no runtime callers) shipped
+in the release PBO; the SPE/VN MotorPool builders `diag_log` every placed object; commented-out Map-Builder export
+scaffolding is left throughout the template files. _(Sprint 7.)_
+
 ---
 
 _Format for new entries:_
@@ -190,3 +219,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added RD-017…020 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
 | 2026-07-02 | Claude | Added RD-021…024 from code-reference Sprint 5 (Server/init) |
 | 2026-07-02 | Claude | Added RD-025 + corrected RD-018 (DRN traffic dead) from Sprint 6 (DRN) |
+| 2026-07-02 | Claude | Added RD-026…029 from code-reference Sprint 7 (Templates) |

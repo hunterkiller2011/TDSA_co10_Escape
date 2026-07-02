@@ -1,295 +1,289 @@
 # Code Reference — Templates
-_Last updated: 2026-06-30 (local)_ · _Status: skeleton_
+_Last updated: 2026-06-30 (local)_ · _Status: documented_
 
 > Procedural building/object templates (prison, COM center, ammo depot, mortar, roadblock, crash site). One entry per source file in `Code/functions/Templates/`. Fields are stubs (`_(to document)_`) until documented. See [README.md](README.md) for field definitions, the call-name caveat, and the caller index [_xref.md](_xref.md).
 
-### a3e_fnc_AmmoDepot  —  `Code/functions/Templates/fn_AmmoDepot.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot  —  `Code/functions/Templates/fn_AmmoDepot.sqf`  ·  _status: documented_
+- **Purpose:** Builds one variant of the enemy weapons cache/depot the players raid: a fenced compound with an OPFOR flag, optional static gun + parked (crewed) vehicle, and a set of weapon/ammo boxes stocked from the mission's global AmmoDepot loot tables. This is the oldest/original composition (hand-placed CSAT-era `Land_IndFnc_3_F` fence ring); the representative for the whole family.
+- **Inputs:** `_this` = `[_middlePos, _staticWeaponClasses, _parkedVehicleClasses]` — the depot centre position, an array of static-weapon classnames to pick from, and an array of parked-vehicle classnames. Reads globals: `A3E_VAR_Flag_Opfor` (flag texture), `A3E_VAR_Side_Opfor` (gunner side), `A3E_Param_Waffelbox` (arsenal-box toggle), `a3e_additional_weapon_box_1/2`, and the loot-table arrays `a3e_arr_AmmoDepotBasicWeapons`, `a3e_arr_AmmoDepotSpecialWeapons`, `a3e_arr_AmmoDepotOrdnance`, `a3e_arr_AmmoDepotVehicle`, `a3e_arr_AmmoDepotVehicleItems`, `a3e_arr_AmmoDepotVehicleBackpacks`, `a3e_arr_AmmoDepotItems`, `a3e_arr_AmmoDepotLaunchers`. Each loot entry is `[classname, probability%, minCount, maxCount, magazines[], magsPerWeapon]`. Precondition: server only (`if(!isserver) exitwith{}`).
+- **Outputs:** No return value. Side effects: creates many map objects (fences, barrels, flags, signs) plus up to ~8 weapon boxes with global cargo, optionally a static gun and a parked vehicle each with an AI gunner spawned via `A3E_fnc_AddStaticGunner`. Increments/initialises global `drn_BuildAmmoDepot_MarkerInstanceNo`. Creates a global location marker (`drn_AmmoDepotMapMarkerN`) and a client-local invisible 50×50 ELLIPSE patrol marker (`drn_AmmoDepotPatrolMarkerN`).
+- **Calls:** `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner` (spawned), `A3E_fnc_initArsenal` (Waffelbox path); engine commands `createVehicle`, `clearWeaponCargoGlobal`/`clearMagazineCargoGlobal`/`clearItemCargoGlobal`/`clearBackpackCargoGlobal`, `add*CargoGlobal`, `setPos`/`setDir`, `setFlagTexture`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered per-mod in `Mods/*/UnitClasses.sqf`; default list `["A3E_fnc_AmmoDepot".."AmmoDepot5"]` hardcoded in `Server/fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller. (Prompt referenced `fn_LoadTemplates.sqf`; actual registration is in the mod UnitClasses files.)
+- **Processing:** (1) server guard; (2) init/increment `drn_BuildAmmoDepot_MarkerInstanceNo`; (3) hand-place a ring of `Land_IndFnc_3_F` industrial fences at fixed offsets from `_middlePos` (no rotation applied — axis-aligned), plus two burning barrels, two `FlagPole_F` flags textured with `A3E_VAR_Flag_Opfor`, and two warning signs; (4) if a static-weapon class is available, `selectRandom` one and place it at one of 4 corner positions chosen by `random 100`, then spawn an OPFOR gunner; (5) ~90% of the time place a parked vehicle from `_parkedVehicleClasses` at one of a few offsets, also with a gunner; (6) then for each loot category (Basic Weapons, Special Weapons, Ordnance, Vehicle, Items, Launchers) run the same loop: iterate the loot table, roll `random 100 <= probability`, compute `floor(min + random(max-min))` count, accumulate weapons + magazines, and if non-empty create the category's ammo box (`Box_East_Wps_F`, `Box_East_WpsLaunch_F`, `Box_East_WpsSpecial_F`, `Box_NATO_AmmoVeh_F`) at a fixed offset, clear its cargo, and fill it; (7) if `A3E_Param_Waffelbox==1` spawn two extra arsenal boxes; (8) create the map + patrol markers.
+- **Theory of operation:** The depot is deliberately data-driven: the physical composition is baked into the script, but *what loot appears* comes entirely from the shared `a3e_arr_AmmoDepot*` tables, so a single set of tables drives every variant and every mod. `createAmmoDepots` places N of these at cleared positions and lets `callRandomFunction` pick a composition, giving visual variety over a fixed loot economy. The invisible ELLIPSE marker is a zone handle used elsewhere (patrols/search), not a visual.
+- **Whys & questions:** Fences are placed with absolute offsets and `setDir` but no per-depot rotation, so this composition always faces the same way (unlike AmmoDepot2+ which apply `_rotation = random 360`). Why keep the old fixed-orientation version in the pool? Likely legacy/backwards-compat. The `typeName _weaponClassName == "STRING"` guard suggests loot tables historically contained non-string placeholders.
+- **Unresolved issues:** No cleanup — every object (fences, barrels, flags, boxes, gunners) is created with `createVehicle` and never tracked or deleted; depots persist for the whole mission (candidate RD: memory/entity growth with `A3E_AmmoDepotCount` depots). `drn_BuildAmmoDepot_MarkerInstanceNo` is a global counter with no reset. Massive code duplication across the 6 loot-category blocks and across all 10 files in this family (candidate RD-dup). Hardcoded OPFOR box classnames (`Box_East_*`, `Box_NATO_*`) assume vanilla assets are present.
+- **Reforger port notes:** In Enfusion, prefer a prefab/composition placed as an entity with a spawn transform, plus a data-driven loot component reading a config table, rather than dozens of imperative `createVehicle` calls. Register created entities for lifecycle cleanup. The random-dispatch selection maps to a weighted prefab list. Flag texture / faction should come from faction config, not a global var.
 
-### a3e_fnc_AmmoDepot2  —  `Code/functions/Templates/fn_AmmoDepot2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot2  —  `Code/functions/Templates/fn_AmmoDepot2.sqf`  ·  _status: documented_
+- **Purpose:** Map-Builder-exported depot composition; the modern template style used as the pattern for AmmoDepot3-5 and the mod variants. Same loot economy as `AmmoDepot`; differs by using rotated relative-offset placement and a Map-Builder object set.
+- **Inputs:** `params ["_center","_staticWeaponClasses","_parkedVehicleClasses"]` (same triple as AmmoDepot). Same loot-table and param globals. Server only.
+- **Outputs:** Same as AmmoDepot — objects, boxes, optional gunner/vehicle, markers, `drn_BuildAmmoDepot_MarkerInstanceNo` bump. No return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (NEW vs AmmoDepot — clears terrain clutter in a 25m radius first), `A3E_fnc_rotatePosition` (rotates each relative offset by a per-depot `_rotation = random 360`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in the mod `UnitClasses.sqf`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same category loop structure as AmmoDepot. Differences: calls `cleanupTerrain` up front; every object is placed via `_center vectorAdd [dx,dy,dz]` → `A3E_fnc_rotatePosition` with `_rotation`, then `setVectorDirAndUp` + `setDir (getDir + _rotation)` + `setPosATL`, so the whole compound is randomly rotated per spawn. Uses a wired-fence / sandbag / `Land_Cargo_House_V2_F` / `Land_LampShabby_F` object set. Boxes are the same OPFOR classes but placed at exported relative coords.
+- **Theory of operation:** Represents the standard Map-Builder export workflow: design in editor, export relative offsets, replay via rotate+create. Loot filling is identical to AmmoDepot, so behaviour is unified while appearance/orientation varies.
+- **Whys & questions:** Adds `cleanupTerrain` so exported objects don't clip existing map clutter — an improvement over AmmoDepot. Only one static gun position here (vs two in Depot3/4).
+- **Unresolved issues:** Same no-cleanup and heavy per-category duplication as AmmoDepot. The `Box_NATO_AmmoVeh_F` "Vehicle" box uses a NATO (BLUFOR) classname inside an otherwise OPFOR set — cosmetic inconsistency inherited by all variants.
+- **Reforger port notes:** The rotate-relative-offset pattern maps cleanly to placing a single composition prefab with a random yaw; individual `createVehicle`+`rotatePosition` calls become one prefab spawn.
 
-### a3e_fnc_AmmoDepot3  —  `Code/functions/Templates/fn_AmmoDepot3.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot3  —  `Code/functions/Templates/fn_AmmoDepot3.sqf`  ·  _status: documented_
+- **Purpose:** Variant of AmmoDepot2 — larger vanilla-asset depot (HBarriers, cargo houses, generator, barrels, watchtower) built by aussie via Map Builder. Differences: bigger footprint, TWO static-gun positions, and a local `_fnc_createObject` helper wrapping rotate+create.
+- **Inputs:** `_this select 0..2` = `[_center,_staticWeaponClasses,_parkedVehicleClasses]`. Same loot/param globals. Server only.
+- **Outputs:** Same object/box/marker/gunner side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (inside local `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`. Defines a private `_fnc_createObject = {classname, center, relPos, rotateDir, relDir}` used for the scenery objects (boxes still use the older explicit pattern in some spots).
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in the mod `UnitClasses.sqf`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot-category loops. Differs from Depot2: two `if (count _staticWeaponClasses>0)` blocks (two guns + two gunners); loot boxes created via `_fnc_createObject` with commented-out AmmoCrate alternatives; a long trailing list of scenery `_fnc_createObject` calls (cargo houses, HBarriers, garbage, metal barrels, tower, `Land_Cargo20_sand_F`). Uses same OPFOR box classes as Depot2.
+- **Theory of operation:** Same as Depot2, just a denser composition and the `_fnc_createObject` convenience wrapper to shorten the many placement calls.
+- **Whys & questions:** The trailing block after the markers contains a broken/commented `_objects` array literal (dangling `];` / `private _center = [0,0,0]; ... forEach _objects; */`) — leftover from the Map-Builder export template that was hand-converted. It is inside a `/* ... */` region so inert, but messy.
+- **Unresolved issues:** Same no-cleanup + duplication. Commented-out `AmmoCrates_NoInteractive_*` markers hint the design once used non-interactive crate props. Dangling export scaffolding (candidate RD-cleanliness). `_fnc_createObject` defined without `private` keyword in Depot3 (defined at line 28 as a bare assignment) — becomes a caller-scope local; harmless here but style noise.
+- **Reforger port notes:** Collapse the whole scenery list + boxes into one composition prefab; the two-gun pattern becomes two gunner spawn points in the prefab metadata.
 
-### a3e_fnc_AmmoDepot4  —  `Code/functions/Templates/fn_AmmoDepot4.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot4  —  `Code/functions/Templates/fn_AmmoDepot4.sqf`  ·  _status: documented_
+- **Purpose:** Variant of AmmoDepot3 — the largest vanilla composition (extensive HBarrier/BagFence walls, multiple cargo houses, camo net, garbage, many barrels). Differences: even bigger footprint and object count; two static guns; `_fnc_createObject` declared `private`.
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (via private `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in the mod `UnitClasses.sqf`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Identical loot logic to Depot3. Differs only in the scenery set (much longer trailing `_fnc_createObject` list: `Land_Cargo_House_V3_F`, `Land_Cargo20_brick_red_F`, `CamoNet_OPFOR_F`, many `Land_BagFence_*`, `Land_MetalBarrel*`, `Land_Sacks_*`, `Land_CratesShabby_F`, etc.) and larger relative offsets (up to ±20m). Two guns, OPFOR box classes same as Depot2/3.
+- **Theory of operation:** Same design as Depot3 at bigger scale for map variety.
+- **Whys & questions:** Same dangling commented export scaffolding at the end. Why maintain 3 near-identical big vanilla compositions (2/3/4)? Purely for visual variety in the random pool.
+- **Unresolved issues:** Same no-cleanup + heavy duplication; largest object count so most entity churn. Commented `AmmoCrates_NoInteractive_*` and `_objects` scaffolding leftovers.
+- **Reforger port notes:** Prime candidate to become a single hand-built composition prefab; the ~60 imperative placement calls are exactly what Enfusion compositions replace.
 
-### a3e_fnc_AmmoDepot5  —  `Code/functions/Templates/fn_AmmoDepot5.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot5  —  `Code/functions/Templates/fn_AmmoDepot5.sqf`  ·  _status: documented_
+- **Purpose:** Variant of AmmoDepot4 — a walled compound with HQ/shed buildings, razorwire, concrete barriers, water tank, camping furniture. Differences: uses `Land_Cargo_HQ_V1_F`/`Land_Shed_Big_F` as the core structures; scenery list placed BEFORE the flag/loot; two static guns.
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (via private `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in the mod `UnitClasses.sqf`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot loops and same OPFOR box classes as Depot2-4. Ordering differs: the big scenery `_fnc_createObject` list runs first (guns, then buildings/barriers/razorwire), the `/* ... */` export scaffolding sits mid-file, then the flag, then the loot boxes and markers.
+- **Theory of operation:** Same as Depot4; different building kit (a "base HQ" look).
+- **Whys & questions:** Note the "Ordnance" box here is created as `Box_East_WpsLaunch_F` (line ~326) rather than `Box_East_WpsSpecial_F` used by the others — likely a copy/paste slip when the file was hand-edited; cosmetic (loot still fills the box).
+- **Unresolved issues:** Same no-cleanup + duplication + dangling commented `_objects`/`AmmoCrates` scaffolding. Mislabeled Ordnance box class (candidate BUG/RD, low severity — only box model differs, not contents).
+- **Reforger port notes:** Same as Depot4 — one HQ-style composition prefab. Fix the box-class inconsistency when authoring the canonical prefab set.
 
-### a3e_fnc_AmmoDepot_VN_US1  —  `Code/functions/Templates/fn_AmmoDepot_VN_US1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot_VN_US1  —  `Code/functions/Templates/fn_AmmoDepot_VN_US1.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire (Vietnam) depot for the US/BLUFOR-as-enemy side — a "FOB" with trench works. Differences: US SOGPF classnames (`Land_vn_b_trench_*`, `Land_vn_us_*`, `vn_b_ammobox_*` crates, `Flag_US_F`), two HMG positions.
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (used directly for car/guns; private `_fnc_createObject` for scenery + boxes), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`. Uses `forceFlagTexture A3E_VAR_Flag_Opfor` on `Flag_US_F`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in the SOGPF mod `UnitClasses.sqf` files — `Mods/SOGPF MACV vs PAVN-VC/`, `Mods/SOGPF PAVN vs ANZAC-ROK/`, `Mods/SOGPF PAVN vs MACV-ARVN/`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot loops. Scenery uses US SOGPF FOB assets: many `Land_vn_b_trench_*` (bunkers, firing steps, revetments), `Land_vn_us_can_50`, `Land_vn_us_30cal`, camp chairs, `Land_vn_camonet_nato`, `Land_vn_shower_01`/`latrine_01`. Loot boxes use US crate classes: `vn_b_ammobox_04` (basic), `vn_b_ammobox_02` (special), `vn_b_ammobox_08` (ordnance), `vn_b_ammobox_09` (vehicle), `vn_b_ammobox_10` (items), `vn_b_ammobox_03` (launchers). An OPFOR-textured `Flag_US_F` and two HMG positions. Car/gun placements use the explicit `rotatePosition`+`setVectorDirAndUp` pattern (like AmmoDepot2) rather than `_fnc_createObject`, while scenery/boxes use `_fnc_createObject` — a mixed style within one file.
+- **Theory of operation:** Same design; US/BLUFOR SOGPF skin. The US side is the enemy in these SOGPF Escape configs, hence US assets carry the OPFOR flag texture. Loaded only under SOGPF builds.
+- **Whys & questions:** Mixed placement styles (direct `rotatePosition` for vehicles/guns, `_fnc_createObject` for the rest) — inconsistency from hand-editing the export.
+- **Unresolved issues:** SOGPF mod coupling; same no-cleanup + duplication; mixed placement idioms (RD-style).
+- **Reforger port notes:** Vietnam US-FOB faction prefab; unify placement, source crate classes and flag from faction config.
 
-### a3e_fnc_AmmoDepot_VN_nva1  —  `Code/functions/Templates/fn_AmmoDepot_VN_nva1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot_VN_nva1  —  `Code/functions/Templates/fn_AmmoDepot_VN_nva1.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire (Vietnam) depot for the NVA/OPFOR side — "Elephant Grass" jungle camp. Differences: SOGPF mod classnames (`Land_vn_o_*` shelters/towers/foliage, `vn_o_ammobox_*` crates), two HMG positions.
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (via private `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in the SOGPF mod `UnitClasses.sqf` files — `Mods/SOGPF MACV vs PAVN-VC/`, `Mods/SOGPF PAVN vs ANZAC-ROK/`, `Mods/SOGPF PAVN vs MACV-ARVN/`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot loops. Scenery uses NVA/OPFOR SOGPF assets: `Land_vn_o_tower_02`, `Land_vn_o_shelter_01/02/03/05`, `Land_vn_o_wallfoliage_01`, `Land_vn_o_platform_06`, `Land_vn_elephant_grass_01`. Loot boxes use NVA crate classes: `vn_o_ammobox_04` (basic), `vn_o_ammobox_02` (special), `vn_o_ammobox_05` (ordnance), `vn_o_ammobox_08` (vehicle), `vn_o_ammobox_01` (items), `vn_o_ammobox_03` (launchers). Two HMG static positions. Trailing comment maps each box to its NVA armory role.
+- **Theory of operation:** Same data-driven loot design; NVA jungle skin and mod-specific crate classes. Loaded only under SOGPF mod builds.
+- **Whys & questions:** Uses the `o` (OPFOR) SOGPF asset prefixes to match the NVA side; the paired `_VN_US1` uses `b` (BLUFOR) prefixes.
+- **Unresolved issues:** SOGPF mod coupling (crate/scenery classnames resolve only under SOGPF); same no-cleanup + duplication.
+- **Reforger port notes:** Vietnam-era faction prefab; crate classes via faction loot-config indirection.
 
-### a3e_fnc_AmmoDepot_spe1  —  `Code/functions/Templates/fn_AmmoDepot_spe1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot_spe1  —  `Code/functions/Templates/fn_AmmoDepot_spe1.sqf`  ·  _status: documented_
+- **Purpose:** SPE (Spearhead 1944 / WWII) depot variant — differences: WWII "Barn" composition and SPE mod classnames. Same loot economy but uses SPE ammo crates instead of vanilla `Box_East_*`.
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (via private `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in `Mods/SPE US vs GER/UnitClasses.sqf` and `Mods/SPE GER vs US/UnitClasses.sqf`; default list in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot loops. Scenery uses SPE assets: `Land_SPE_Barn_01`, `Land_SPE_Tractor_01`, `Land_SPE_Straw_Bale*`, many `Land_SPE_Sandbag_*`, `SPE_Cow_Dead_Brown_01`, `SPE_Banner_01_FFF_F`. Loot boxes use SPE classnames: `SPE_BasicWeaponsBox_US` (basic + launchers), `SPE_US_2x_Open_Ammocrate_alt_Rifle_Ball` (special), `SPE_Mine_AmmoBox_US` (ordnance), `SPE_BasicAmmunitionBox_US` (vehicle + items). One static gun. A trailing `/* ... */` comment maps the old vanilla box classes to their SPE replacements.
+- **Theory of operation:** Same data-driven loot design; only the physical WWII skin and box classnames change. Loaded only under SPE mod builds, so classnames resolve.
+- **Whys & questions:** The mapping comment block documents the vanilla→SPE box substitution — useful provenance. `if(!isserver)` and marker logic identical to the vanilla family.
+- **Unresolved issues:** SPE box/scenery classnames HARD DEPEND on the SPE mod — this file would error (null objects) if ever selected under a non-SPE build; safe only because it's registered exclusively in SPE UnitClasses (candidate RD-modcoupling). Same no-cleanup + duplication.
+- **Reforger port notes:** Faction/era-specific prefab; box classnames should come from a faction loot-config indirection so the same logic serves all eras.
 
-### a3e_fnc_AmmoDepot_spe2  —  `Code/functions/Templates/fn_AmmoDepot_spe2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot_spe2  —  `Code/functions/Templates/fn_AmmoDepot_spe2.sqf`  ·  _status: documented_
+- **Purpose:** SPE variant — "Bocage small" composition. Differences from spe1: hedgerow/mound (`Land_SPE_Bocage_*`, `Land_SPE_Mound_Low_02`) scenery instead of the barn, smaller footprint, and NO static gun ("// None here").
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects (minus a static gun); no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (via private `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner` (only for the parked car), `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in `Mods/SPE US vs GER/UnitClasses.sqf` and `Mods/SPE GER vs US/UnitClasses.sqf`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot loops and same SPE box classnames as spe1. Scenery is a bocage line (`Land_SPE_Bocage_Low_Long`, `Land_SPE_bocage_long_mound`, `Land_SPE_bocage_tree_01*`). Static-weapon block omitted entirely. Trailing vanilla→SPE mapping comment present.
+- **Theory of operation:** Same as spe1; lighter/open-field skin with no emplaced gun.
+- **Whys & questions:** Intentional no-gun (open bocage ambush feel). Otherwise identical logic.
+- **Unresolved issues:** Same SPE mod coupling, no-cleanup, duplication.
+- **Reforger port notes:** Same as spe1; mark this prefab as "no static emplacement".
 
-### a3e_fnc_AmmoDepot_spe3  —  `Code/functions/Templates/fn_AmmoDepot_spe3.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_AmmoDepot_spe3  —  `Code/functions/Templates/fn_AmmoDepot_spe3.sqf`  ·  _status: documented_
+- **Purpose:** SPE variant — "Bocage medium" composition. Differences from spe2: larger bocage layout with camo netting (`Land_SPE_Netting_01`) and a deployed MG position; ONE static gun restored (`SPE_ST_MG42_Lafette_Deployed` per the mapping comment).
+- **Inputs:** `_this select 0..2` triple; same loot/param globals; server only.
+- **Outputs:** Same side effects; no return.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_rotatePosition` (via private `_fnc_createObject`), `A3E_fnc_createLocationMarker`, `A3E_fnc_AddStaticGunner`, `A3E_fnc_initArsenal`.
+- **Called by:** [template-array] `A3E_AmmoDepotTemplates` (registered in `Mods/SPE US vs GER/UnitClasses.sqf` and `Mods/SPE GER vs US/UnitClasses.sqf`; default in `fn_createAmmoDepots.sqf`), selected in `Server/fn_createAmmoDepots.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch, so `_xref` shows no direct `fnc_` caller.
+- **Processing:** Same six loot loops and same SPE box classnames as spe1/spe2. Scenery: `Land_SPE_bocage_tree_02/03*`, `Land_SPE_Bocage_Long`, `Land_SPE_Sandbag_*`, `Land_SPE_Netting_01`, `Land_SPE_Mound_Low_02`. One static-weapon block. Trailing vanilla→SPE mapping comment present.
+- **Theory of operation:** Same as spe1/spe2; medium bocage with concealment netting and an MG emplacement.
+- **Whys & questions:** The three SPE files (spe1/2/3) are barn / small-bocage / medium-bocage flavours of one design — same loot, three skins, differing static-gun count (1/0/1).
+- **Unresolved issues:** Same SPE mod coupling, no-cleanup, duplication.
+- **Reforger port notes:** Same as spe1; one prefab per skin, gun-count as metadata.
 
-### a3e_fnc_BuildComCenter  —  `Code/functions/Templates/fn_BuildComCenter.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter  —  `Code/functions/Templates/fn_BuildComCenter.sqf`  ·  _status: documented_
+- **Purpose:** Builds one of the Communication Center compositions players must reach and hack to contact friendly forces. This is the representative/original variant: a bagfence-walled Opfor camp with a data terminal, barracks, antennas, generator, flag, optional static guns and parked vehicles. Vanilla (Altis/CSAT-era) classnames.
+- **Inputs:** `_this` array — `[0]` `_centerPos` (world position, required), `[1]` `_rotateDir` (rotation in degrees), `[2]` `_staticWeaponClasses` (optional array; default `[]`), `[3]` `_parkedVehicleClasses` (optional array; default `[]`). Reads globals `A3E_VAR_Flag_Opfor` (flag texture) and `A3E_VAR_Side_Opfor` (gunner side). Server-side (dispatched from server context).
+- **Outputs:** No return value used. Side effects: `createVehicle`s ~50 static composition objects (bagfence walls, barracks `Land_Cargo_Patrol_V1_F`, `Land_Communication_F` generator, `Land_Medevac_House_V1_F`, `Land_Cargo_House_V1_F`, toilets, fuel tank, flagpole). Spawns the interactable terminal `Land_DataTerminal_01_F` and marks it `_obj setVariable ["A3E_isTerminal", true, true]` (public), `allowDamage false`, colored green via `BIS_fnc_DataTerminalColor`. Optionally spawns up to 2 static guns (`A3E_fnc_AddStaticGunner`) and up to 2 parked vehicles. Sets flag texture. No explicit cleanup/registration of the created objects; only clears terrain first.
+- **Calls:** `a3e_fnc_cleanupTerrain` (clears 25 m radius before building), `a3e_fnc_RotatePosition` (relative→world coords, via inner `_fnc_CreateObject`/`_fnc_CreateVehicle`), `A3E_fnc_AddStaticGunner` (spawned), `BIS_fnc_DataTerminalColor`, engine `createVehicle`/`setDir`/`forceFlagTexture`/`setVariable`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered per-mod in `Mods/{Mod}/UnitClasses.sqf`, e.g. `Mods/Vanilla/UnitClasses.sqf:1020`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller. (NB: prompt said registration lives in `fn_LoadTemplates.sqf`; it does not — the array is set in the per-mod `UnitClasses.sqf`.)
+- **Processing:** (1) Parse params by index; default the two optional class arrays to `[]`. (2) `cleanupTerrain` 25 m. (3) Define two inner closures `_fnc_CreateObject` (CAN_COLLIDE) and `_fnc_CreateVehicle` (NONE), each taking `[className, relativePos, relativeDir, centerPos, rotateDir]`, rotating the relative offset around the center via `a3e_fnc_RotatePosition` and setting dir. (4) Long sequence of literal `[class, pos, dir, _centerPos, _rotateDir] call _fnc_CreateObject` calls placing the walls/buildings/props. (5) Place terminal, tag it `A3E_isTerminal`, disable damage, color green. (6) Place flag and `forceFlagTexture A3E_VAR_Flag_Opfor`. (7) If static-weapon array non-empty, spawn 2 statics + gunners at fixed offsets. (8) If vehicle array non-empty, spawn 2 vehicles.
+- **Theory of operation:** A Map-Builder (Eden) export converted to SQF. Placement is data (hard-coded relative offsets + dirs); the engine builds the physical camp. The only *mission-relevant* object is the `Land_DataTerminal_01_F` flagged `A3E_isTerminal` — `Common/fn_addUserActions.sqf` checks `getVariable "A3E_isTerminal"` on the cursor object within 3 m to offer the hack action (and later `A3E_Terminal_Hacked`). Everything else is set dressing / defenders. Random selection across the template array + random static/vehicle classes gives per-session variety. This first variant uniquely uses two inner-closure names (`_fnc_CreateObject`/`_fnc_CreateVehicle`) and index-based params; later variants standardize on a single `_fnc_createObject` and a 3-D relative-position signature.
+- **Whys & questions:** Why index-based param parsing here vs `params`/`param` in the others? — legacy; this is the oldest export. Why is the terminal `allowDamage false` but the rest destructible? — the terminal is the mission objective and must survive to be hacked. Why `forceFlagTexture` on a raw flagpole? — visually marks the site as Opfor. Open question: is 25 m `cleanupTerrain` enough for the largest footprint (variants 4/5 use 40 m)?
+- **Unresolved issues:** Heavy hard-coded duplication across all 11 files (candidate RD — see CONCERNS). No cleanup: created objects are never tracked or deleted when the com center is neutralized/mission ends (relies on mission teardown). The commented-out `BIS_fnc_MP` addAction lines (Hijack / heal) are dead code. Casing mismatch `_realpos` vs `_realPos` in `_fnc_CreateVehicle` is harmless (RD-008 style noise). `_index`/`_powerGenerator`/`_pos`/`_dir` etc. declared private but several are only used transiently — no defect.
+- **Reforger port notes:** In Enfusion these compositions map naturally to prefabs (a single `.et` per com-center layout) instead of per-object SQF spawning. The `A3E_isTerminal` interactable becomes a component/action on a terminal prefab. Relative-offset + rotate math is replaced by prefab child transforms. Consider one parameterized prefab with mod-specific material/mesh swaps rather than 11 hand-coded scripts; expose static-gun and parked-vehicle slots as optional child entities.
 
-### a3e_fnc_BuildComCenter2  —  `Code/functions/Templates/fn_BuildComCenter2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter2  —  `Code/functions/Templates/fn_BuildComCenter2.sqf`  ·  _status: documented_
+- **Purpose:** Second vanilla com-center composition — a `Land_Mil_WallBig_*` walled compound with a cargo tower, barrels, toilets and a data terminal. Variant of BuildComCenter.
+- **Inputs:** Variant of BuildComCenter — differences: uses NeoArmageddon export header and typed `params [["_center",...],["_rotation",0,...],["_staticWeaponClasses",...],["_parkedVehicleClasses",...]]`. Same globals (`A3E_VAR_Flag_Opfor`, `A3E_VAR_Side_Opfor`).
+- **Outputs:** Same pattern — spawns composition (big military walls, `Land_Cargo_Tower_V1_F` `allowDamage false`, cargo nets/barrels, `Land_DataTerminal_01_F` tagged `A3E_isTerminal` + green + `allowDamage false`, flagpole). 1 static gun (not 2), up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), single inner `_fnc_createObject` closure using `A3E_fnc_rotatePosition` with **3-D** relative positions (`_setPosATL`), `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in `Mods/{Mod}/UnitClasses.sqf`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: single param signature; `_rotation = _rotation + 180` "fix rotation" adjustment; one unified `_fnc_createObject` (CAN via `"NONE"` collision) that both rotates and `setPosATL`s using the z-component of the relative position. Placement list is exact float offsets from the Eden export.
+- **Theory of operation:** Same as BuildComCenter — the only mission-relevant output is the `A3E_isTerminal` data terminal; everything else is set dressing/defense. Uses the standardized inner-closure form the later variants share.
+- **Whys & questions:** Why only 1 static gun here vs 2 in variant 1? — layout choice. Why `_rotation + 180`? — corrects Eden-export orientation so the composition faces as authored.
+- **Unresolved issues:** Same duplication concern. Terminal identification is consistent (`A3E_isTerminal` + `Land_DataTerminal_01_F`). No object tracking/cleanup.
+- **Reforger port notes:** Same as BuildComCenter — becomes a prefab; the `+180` rotation fix disappears once authored natively in the World Editor.
 
-### a3e_fnc_BuildComCenter3  —  `Code/functions/Templates/fn_BuildComCenter3.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter3  —  `Code/functions/Templates/fn_BuildComCenter3.sqf`  ·  _status: documented_
+- **Purpose:** Third vanilla com-center — a `Land_Bunker_01_*` fortified bunker complex with a small transmitter tower (`Land_TTowerSmall_1_F`) and data terminal. Variant of BuildComCenter.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]` for center/rotation, `count _this > 2/3` guards for the optional class arrays. Same globals.
+- **Outputs:** Spawns bunker blocks (`Land_Bunker_01_blocks_*`, `_HQ_`, `_small_`, `_tall_` — the tall bunker `allowDamage false`), sandbag barricades, `Land_TTowerSmall_1_F`, flagpole, and terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green, no damage). 2 static guns, up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject` (`A3E_fnc_rotatePosition`, 3-D, CAN_COLLIDE), `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in `Mods/{Mod}/UnitClasses.sqf` — notably also included by SOGPF Vietnam mods, e.g. `Mods/SOGPF MACV vs PAVN-VC/UnitClasses.sqf:609`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: `param`-based parsing; `_rotation + 180` fix; single `_fnc_createObject`. Two `allowDamage false` structures (`Land_Cargo_Tower`-equivalent tall bunker and the terminal).
+- **Theory of operation:** Same as BuildComCenter. Interesting: this vanilla template is reused by the SOGPF (Vietnam) mod arrays, so its vanilla-Arma classnames (`Land_Bunker_01_*`, `Land_DataTerminal_01_F`) must load in the SOGPF mod set — a mod-classname coupling to flag (see CONCERNS).
+- **Whys & questions:** Why does a Vietnam mod reuse a vanilla-classname composition? — likely because these `Land_Bunker_01_*`/`Land_DataTerminal_01_F` classes ship with base Arma and are always available; still a fragility if a mod ever removes base assets.
+- **Unresolved issues:** Same duplication + no-cleanup concerns. Cross-mod reuse of vanilla classnames is a fragility (candidate RD/Q).
+- **Reforger port notes:** Same as BuildComCenter — prefab. If Vietnam and vanilla share this layout, a single prefab with theatre-specific material variants would avoid the cross-mod classname coupling.
 
-### a3e_fnc_BuildComCenter4  —  `Code/functions/Templates/fn_BuildComCenter4.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter4  —  `Code/functions/Templates/fn_BuildComCenter4.sqf`  ·  _status: documented_
+- **Purpose:** Fourth vanilla com-center (aussie-modified) — a large HBarrier/HESCO shantytown-style compound with slum houses, wrecks and a data terminal. Largest footprint of the vanilla set. Variant of BuildComCenter.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns a large composition (`Land_HBarrier_*`, `Land_Slum_House0*_F`, `Land_Cargo_Tower_V2_F`, wrecks, generators, water tank, crates) plus `Flag_CSAT_F` (a full flag object, not a bare pole) with `forceFlagTexture`, and terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green, no damage). 2 static guns, up to 2 parked vehicles. Note: the bulk of the props are placed AFTER the static/vehicle blocks in a trailing list. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (**40 m** — larger radius for the bigger footprint), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in `Mods/{Mod}/UnitClasses.sqf`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: 40 m cleanup; uses `Flag_CSAT_F` instead of `FlagPole_F`; static/vehicle spawn blocks appear *before* the large trailing prop list (all still executed unconditionally). Header contains credits/comments (NeoArmageddon, Zec, M3Eden, aussie).
+- **Theory of operation:** Same as BuildComCenter — only the terminal matters to mission logic. Larger camp → larger terrain clear.
+- **Whys & questions:** Why `Flag_CSAT_F` (real flag) here vs `FlagPole_F`/`Flag_CSAT_F` split elsewhere? — cosmetic per-author choice. Comment references a forum link and a `flag/logo.paa` custom-texture option (dead/optional).
+- **Unresolved issues:** Same duplication + no-cleanup concerns. One static-gun offset has z=17.89 (`[17.52,-21.04,17.8909]`) — an elevated placement that may float/misplace on flat terrain (possible layout artifact). Trailing prop list is huge → heaviest spawn cost of the set.
+- **Reforger port notes:** Same as BuildComCenter — prefab. Its size makes it the strongest candidate for LOD/streaming attention in Enfusion.
 
-### a3e_fnc_BuildComCenter5  —  `Code/functions/Templates/fn_BuildComCenter5.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter5  —  `Code/functions/Templates/fn_BuildComCenter5.sqf`  ·  _status: documented_
+- **Purpose:** Fifth vanilla com-center (aussie-modified) — a large wired/`Land_Wall_IndCnc_*` fenced industrial military compound with benches, gym gear and a data terminal. Variant of BuildComCenter.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns a large fenced composition (`Land_Mil_WiredFence_*`, `Land_Wall_IndCnc_*`, `Land_New_WiredFence_5m_F`, bag fences, `Land_BagBunker_Tower_F`, `Land_Communication_F`, benches, crates) plus `Flag_CSAT_F` + `forceFlagTexture`, and terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green, no damage). 2 static guns, up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (**40 m**), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in `Mods/{Mod}/UnitClasses.sqf`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: 40 m cleanup; `Flag_CSAT_F`; large trailing prop list. Contains a big commented-out `_objects`/`forEach` block (an alternate data-driven placement approach that was never used) and commented sniper/ammo-crate placements.
+- **Theory of operation:** Same as BuildComCenter — only the terminal is mission-relevant.
+- **Whys & questions:** The commented alternate `forEach _objects` loop shows an intended data-table refactor (each object = `[class, relPos, dir, [enableSim, allowDamage]]`) — a hint at how a de-duplicated version would look. One static-gun offset `[-27,10.5,...]` sits well outside the fenced area (possible authoring artifact).
+- **Unresolved issues:** Same duplication + no-cleanup concerns. The dead commented block is tech debt to remove during port. Out-of-bounds static gun position may leave a gun exposed off-composition.
+- **Reforger port notes:** Same as BuildComCenter — prefab. The commented data-table approach is essentially what a prefab child-list becomes natively.
 
-### a3e_fnc_BuildComCenter_spe1  —  `Code/functions/Templates/fn_BuildComCenter_spe1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter_spe1  —  `Code/functions/Templates/fn_BuildComCenter_spe1.sqf`  ·  _status: documented_
+- **Purpose:** SPE (Spearhead 1944 / WWII) com-center — a WWII sandbag-and-tent field camp usable by both sides, with a US field radio as the objective. Variant of BuildComCenter with SPE classnames.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns SPE composition (`Land_SPE_Sandbag_*`, `Land_SPE_HedgeHog`, `Land_SPE_BarbedWire_04`, `Land_SPE_Tent_01/02`, stretchers, netting, `SPE_DiningTable_01_w`) plus flag `SPE_FlagCarrier_FFF` + `forceFlagTexture`. **Interactable radio is `SPE_Radio_Us`** tagged `A3E_isTerminal`, `allowDamage false` — but **NOT** colored (no `BIS_fnc_DataTerminalColor`, since it is not a `DataTerminal`). Up to **4** static guns (commented MG34 positions replaced by random statics), up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`. Does **not** call `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in `Mods/SPE GER vs US/UnitClasses.sqf:588` and `Mods/SPE US vs GER/UnitClasses.sqf:502` — SPE mod sets), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: SPE-mod classnames throughout; the terminal object is a `SPE_Radio_Us` prop rather than `Land_DataTerminal_01_F`; up to 4 static guns instead of 2; several MG/truck placements are commented out and delegated to the random static/vehicle arrays.
+- **Theory of operation:** Same interactable contract via `A3E_isTerminal`, but the mission's terminal *coloring* step is skipped because the SPE radio is not a data terminal. The hack action (`fn_addUserActions.sqf`) keys only off `A3E_isTerminal`, so functionality is preserved; only the green-glow visual cue is absent (see CONCERNS — terminal identification is consistent, but the visual treatment is not).
+- **Whys & questions:** Is the missing `BIS_fnc_DataTerminalColor` intentional (radio has no colorable selection) or an oversight losing the player's visual cue? — likely intentional/necessary but worth confirming for UX parity.
+- **Unresolved issues:** Visual inconsistency: SPE/GER radios get no green highlight that vanilla/VN data-terminals get. Same duplication + no-cleanup concerns. Mod-classname dependency on the SPE addon.
+- **Reforger port notes:** Map to an SPE-theatre prefab with a period radio as the interactable. Standardize the interactable so all theatres share one highlight/interaction component regardless of mesh.
 
-### a3e_fnc_BuildComCenter_spe_ger1  —  `Code/functions/Templates/fn_BuildComCenter_spe_ger1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter_spe_ger1  —  `Code/functions/Templates/fn_BuildComCenter_spe_ger1.sqf`  ·  _status: documented_
+- **Purpose:** SPE German com-center — a bombed manor-house ruin fortified with German kit and a German field radio as the objective. Variant of BuildComCenter with SPE-German classnames.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns SPE composition (`Land_SPE_Manor_House_ruins` `allowDamage false`, `Land_SPE_HedgeHog`, `Land_SPE_BarbedWire_02`, `Land_SPE_Sandbag_*`, `Land_SPE_Ammocan_German`, `Land_SPE_Fuel_Barrel_German`, German lamps/furniture) plus **two** `SPE_Banner_01_GER_F` flags each `forceFlagTexture`d. **Interactable radio is `SPE_Radio_Ger`** tagged `A3E_isTerminal`, `allowDamage false`, **not** colored. Up to **3** static guns, up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`. No `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in the SPE mod `UnitClasses.sqf`, GER-side variant), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: German SPE classnames; two banner flags instead of one flagpole; `SPE_Radio_Ger` is the terminal; 3 static guns; commented-out MG34/truck placements delegated to random arrays.
+- **Theory of operation:** Same as `_spe1` — `A3E_isTerminal` contract preserved, no data-terminal coloring.
+- **Whys & questions:** Same missing-color question as `_spe1`. Two `forceFlagTexture` banners — both overwritten to Opfor texture; is a German banner meant to keep its native texture? — possible cosmetic bug (Opfor flag texture may look wrong on a WWII German banner).
+- **Unresolved issues:** Same visual-cue inconsistency and duplication/no-cleanup concerns. Applying `A3E_VAR_Flag_Opfor` to `SPE_Banner_01_GER_F` may produce a mismatched texture (minor cosmetic candidate BUG/Q).
+- **Reforger port notes:** SPE-German prefab; unify interactable component; decide banner-texture policy for period factions.
 
-### a3e_fnc_BuildComCenter_vn_nva1  —  `Code/functions/Templates/fn_BuildComCenter_vn_nva1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter_vn_nva1  —  `Code/functions/Templates/fn_BuildComCenter_vn_nva1.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire (Vietnam) NVA com-center #1 — a cave/big-rock hideout with a watchtower and a data terminal placed atop the rock. Variant of BuildComCenter with VN classnames.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns a compact VN composition (`Land_vn_cave_04_01`, `Land_vn_bagfence_01_round_green_f`, `Land_vn_camonetb_nato`, `Land_vn_ttowersmall_2_f`, `Land_vn_o_platform_03`, `Land_vn_o_wallfoliage_01`) plus terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green via `BIS_fnc_DataTerminalColor`, `allowDamage false`). 2 static guns, up to 2 parked vehicles. **No flag object.** No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in the SOGPF mod `UnitClasses.sqf`, e.g. `Mods/SOGPF MACV vs PAVN-VC/UnitClasses.sqf:609`, alongside vanilla `BuildComCenter3`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: VN classnames; terminal is the **vanilla** `Land_DataTerminal_01_F` (so coloring is applied, unlike SPE); no flag; terminal placed at z≈14 on top of the rock/cave.
+- **Theory of operation:** Same as BuildComCenter — the vanilla data terminal keeps the colored visual cue; VN theme is set dressing. Terminal on the rock top means the player must climb/reach elevation.
+- **Whys & questions:** Why keep a vanilla `Land_DataTerminal_01_F` in a Vietnam camp (anachronistic prop) rather than a period radio like SPE does? — likely for the working colorable-terminal visual + guaranteed base-game availability; minor immersion trade-off. No flag — intentional for a hidden cave site?
+- **Unresolved issues:** Anachronistic vanilla terminal in VN theatre (cosmetic/immersion, candidate Q). Mixing with vanilla `BuildComCenter3` in the same array (see CONCERNS). Same duplication/no-cleanup concerns.
+- **Reforger port notes:** VN cave prefab; if a period radio interactable exists, swap the anachronistic terminal for it while keeping a shared highlight component.
 
-### a3e_fnc_BuildComCenter_vn_nva2  —  `Code/functions/Templates/fn_BuildComCenter_vn_nva2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter_vn_nva2  —  `Code/functions/Templates/fn_BuildComCenter_vn_nva2.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire NVA com-center #2 — a temple-ruin site with statues, punji fences and a watchtower, terminal placed high on the ruin. Variant of BuildComCenter with VN classnames.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns VN composition (`Land_vn_temple_ruin_0*`, `Land_vn_temple_statue_01`, `Land_vn_fence_punji_01_03`, `vn_o_snipertree_02`, `Land_vn_ttowersmall_2_f`, `Land_vn_o_platform_01`) plus terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green, no damage). 2 static guns, up to 2 parked vehicles. **No flag.** No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in the SOGPF mod `UnitClasses.sqf`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: temple-ruin VN classnames; vanilla data terminal placed at z≈8.5 on the ruin; no flag.
+- **Theory of operation:** Same as `_vn_nva1` — vanilla colored terminal, VN set dressing, elevated placement.
+- **Whys & questions:** Same anachronistic-terminal / no-flag observations as `_vn_nva1`.
+- **Unresolved issues:** Same as `_vn_nva1` — vanilla terminal in VN theatre, array mixing with vanilla template, duplication/no-cleanup.
+- **Reforger port notes:** VN temple prefab; same interactable-unification recommendation.
 
-### a3e_fnc_BuildComCenter_vn_us1  —  `Code/functions/Templates/fn_BuildComCenter_vn_us1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter_vn_us1  —  `Code/functions/Templates/fn_BuildComCenter_vn_us1.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire US com-center #1 — a trench-line FOB (fighting positions, bunkers, tower, razor wire) with a US flag and a data terminal. Variant of BuildComCenter with VN classnames.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns a trench/FOB composition (`Land_vn_b_trench_*`, `Land_vn_razorwire_f`, `Land_vn_b_tower_01`, `Land_vn_ttowersmall_2_f`, `Land_vn_tank_rust_f`, `Land_vn_latrine_01`) plus `Flag_US_F` + `forceFlagTexture`, and terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green, no damage). 2 static guns, up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in the SOGPF US-side mod `UnitClasses.sqf`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: extensive VN trench/bunker classnames; `Flag_US_F` (note: still `forceFlagTexture A3E_VAR_Flag_Opfor`, so a US flag mesh with the Opfor texture); vanilla colored data terminal.
+- **Theory of operation:** Same as BuildComCenter — colored vanilla terminal, VN FOB set dressing. Has a flag (unlike the NVA variants).
+- **Whys & questions:** `Flag_US_F` overwritten with `A3E_VAR_Flag_Opfor` — same banner-texture question as SPE-GER (US flag re-textured to Opfor's texture; may look off). Anachronistic vanilla terminal again.
+- **Unresolved issues:** Possible cosmetic flag-texture mismatch (candidate Q/BUG). Vanilla terminal in VN theatre. Duplication/no-cleanup.
+- **Reforger port notes:** VN US-FOB prefab; unify interactable; resolve flag-texture policy.
 
-### a3e_fnc_BuildComCenter_vn_us2  —  `Code/functions/Templates/fn_BuildComCenter_vn_us2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildComCenter_vn_us2  —  `Code/functions/Templates/fn_BuildComCenter_vn_us2.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire US com-center #2 — a barracks-based US base (revetments, wired fences, guard box, loudspeakers, barracks building) with a US flag and a data terminal. Largest VN variant. Variant of BuildComCenter with VN classnames.
+- **Inputs:** Variant of BuildComCenter — differences: `param[0]`/`param[1]`, `count _this` guards. Same globals.
+- **Outputs:** Spawns a large barracks composition (`Land_vn_b_trench_revetment_05_01` ×many, `Land_vn_mil_wiredfence_f`, `Land_vn_barracks_01_grey_f`, `Land_vn_bagbunker_small_f`, `Land_vn_guardbox_01_smooth_f`, `Land_Loudspeakers_F`, `Land_BarGate_F`, hedgehogs, sandbags, ammo boxes) plus `Flag_US_F` + `forceFlagTexture`, and terminal `Land_DataTerminal_01_F` (`A3E_isTerminal`, green, no damage). 2 static guns, up to 2 parked vehicles. No cleanup/return.
+- **Calls:** `a3e_fnc_cleanupTerrain` (25 m), inner `_fnc_createObject`, `A3E_fnc_AddStaticGunner`, `BIS_fnc_DataTerminalColor`.
+- **Called by:** [template-array] `A3E_ComCenterTemplates` (registered in the SOGPF US-side mod `UnitClasses.sqf`), selected in `Server/fn_createComCenters.sqf` via `A3E_fnc_callRandomFunction` — dynamic dispatch; `_xref` shows no direct `fnc_` caller.
+- **Processing:** Variant of BuildComCenter — differences: largest VN prop list; mixes some **vanilla** classes (`Land_BarGate_F`, `Land_Loudspeakers_F`, `Land_DataTerminal_01_F`) with VN classes; `Flag_US_F` re-textured to Opfor; 25 m cleanup despite a large footprint.
+- **Theory of operation:** Same as BuildComCenter — colored vanilla terminal; VN US-barracks set dressing.
+- **Whys & questions:** Same flag-texture and anachronistic-terminal questions. Note 25 m `cleanupTerrain` for a fairly large base (variants 4/5 used 40 m) — possible under-cleared footprint leaving native terrain objects intersecting the composition.
+- **Unresolved issues:** Under-sized cleanup radius vs footprint (candidate Q/RD). Mixed vanilla+VN classnames. Flag-texture mismatch. Duplication/no-cleanup.
+- **Reforger port notes:** VN US-barracks prefab; unify interactable; align cleanup/clear-radius with prefab bounds at author time.
 
-### a3e_fnc_BuildMotorPool  —  `Code/functions/Templates/fn_BuildMotorPool.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildMotorPool  —  `Code/functions/Templates/fn_BuildMotorPool.sqf`  ·  _status: documented_
+- **Purpose:** Constructs one enemy vehicle-park / motor-pool composition (a Map-Builder export replayed as a script): a razorwire-and-HBarrier-fenced compound with cargo buildings, a workshop area (workbenches, tools, generators), a CSAT flag, an optional static gun, an optional parked armor piece, and 1–3 random parked vehicles. It is the transport players are meant to steal to reach extraction. This is the modern-Arma (Vanilla/CUP/RHS/etc.) variant and the hardcoded default template.
+- **Inputs:** `_this` array via `bis_fnc_param`: `[0]` `_centerPos` (compound center position), `[1]` `_rotateDir` (whole-composition rotation, degrees), `[2]` `_staticWeaponClasses` (default `[]`), `[3]` `_parkedVehicleClasses` (default `[]`), `[4]` `_parkedArmorClasses` (default `[]`), `[5]` `_staticAAClasses` (default `[]`). Reads globals `A3E_VAR_Flag_Opfor` (flag texture), `A3E_VAR_Side_Opfor` (gunner side). Uses/initializes global `A3E_MotorPoolMarkerNumber` (see Outputs). Preconditions: expected to run server-side (its caller exits on non-server); class names must exist in the loaded mod set.
+- **Outputs:** Spawns ~150 static map objects (razorwire, `Land_HBarrierBig_F` walls, `Land_HBarrierTower_F`, `Land_Cargo_*` buildings, `Land_TentHangar_V1_F`, workshop clutter, `Flag_CSAT_F`) plus: optionally a static AA gun attached to the HQ building (only when the `Land_Cargo_HQ_V1_F` object is placed AND `_staticAAClasses` non-empty), optionally one static weapon with an AI gunner, optionally one parked armor vehicle, and 1–3 parked vehicles (first always if list non-empty; second at ~50% chance; third at ~25%). Static gunner / AA gunner added via `spawn A3E_fnc_AddStaticGunner`. Creates a visible location marker `"A3E_MotorPoolMapMarker"+n` (icon `o_service`) and a local, invisible 40×38 `RECTANGLE` patrol marker `"A3E_MotorPoolPatrolMarker"+n`. Mutates global counter `A3E_MotorPoolMarkerNumber` (init 0, else +1) to number the markers. Returns nothing meaningful (last statement is a marker size call). Note the terrain is cleared via `a3e_fnc_cleanupTerrain` (radius 50) before building.
+- **Calls:** `bis_fnc_param`, `a3e_fnc_cleanupTerrain`, `a3e_fnc_RotatePosition` (inside the two inline helpers `_fnc_CreateObject`/`_fnc_CreateVehicle`), `BIS_fnc_selectRandom` / `selectRandom`, `A3E_fnc_AddStaticGunner` (via `spawn`), `A3E_fnc_createLocationMarker`, engine `createVehicle`/`attachTo`/`setDir`/`setVectorUp`/`setFuel`/`setDamage`/`setVehicleAmmo`/`createMarkerLocal`.
+- **Called by:** Indirect (template-array dispatch). `Code/functions/Server/fn_createMotorPools.sqf:83` calls `A3E_fnc_callRandomFunction` on the `A3E_MotorPoolTemplates` array. That array is set per-mod in `Mods/{Mod}/UnitClasses.sqf` (e.g. `Mods/Vanilla/UnitClasses.sqf:1009`, also CSLA-US); when unset, `fn_createMotorPools.sqf:77` supplies the hardcoded default `["A3E_fnc_BuildMotorPool"]`. Registration is NOT in `fn_LoadTemplates.sqf`. The dispatch passes `[centerPos, dir-180, a3e_arr_ComCenStaticWeapons, a3e_arr_ComCenParkedVehicles, (light+heavy ComCen armor)]` — note it reuses the **ComCen** class arrays and passes no `_staticAAClasses` (arg 5), so the HQ-AA branch never fires from this caller.
+- **Processing:** (1) Increment/init `A3E_MotorPoolMarkerNumber`, capture as `_mNumber`. (2) Read the six params. (3) Define two inline helpers: `_fnc_CreateObject` (rotate a relative offset about center via `a3e_fnc_RotatePosition`, `createVehicle ... "CAN_COLLIDE"`, set dir, optional surface-align, and a special case that attaches a static AA + gunner when the object is the HQ building and AA classes are supplied), and `_fnc_CreateVehicle` (same placement but `"NONE"` collision mode, no align). (4) `a3e_fnc_cleanupTerrain` radius 50. (5) Place the long hardcoded list of walls/wire/buildings/clutter at fixed relative offsets. (6) Set the flag texture to `A3E_VAR_Flag_Opfor`. (7) If static weapons supplied, place one random gun + gunner. (8) If armor supplied, place one random armor with randomized low fuel / damage / ammo. (9) If vehicles supplied, place one; then with `random 1` gate, possibly a 2nd (>0.5) and 3rd (>0.75). (10) Create the service map marker and the invisible rectangular patrol marker.
+- **Theory of operation:** The mission needs procedurally-scattered, mod-appropriate compounds that (a) look like a guarded vehicle depot and (b) actually hold stealable transport. Rather than a data-driven composition format, each compound is a hand-exported object list from the Arma Map Builder, wrapped as a function so it can be rotated and dropped at a runtime-chosen com-center marker. Randomized fuel/damage/ammo makes stolen vehicles imperfect; the patrol rectangle feeds the zone/patrol system (`initLocationZone` with type `"MOTORPOOL"`, wired up by the caller). Marker numbering keeps each instance's markers unique.
+- **Whys & questions:** Why reuse the ComCen weapon/vehicle/armor arrays instead of dedicated motor-pool arrays? Likely expedience — a motor pool and a com-center defensive footprint draw from the same faction pools. Why the `dir-180` at the call site (with the `// Fixme: hard coding to 180°` note in the caller)? An orientation hack so the composition faces sensibly relative to the marker. The `_staticAAClasses`/HQ-AA feature exists in the function but is dead from the only known caller (arg 5 never passed).
+- **Unresolved issues:** (a) Large block of `private[...]` declarations lists many vars never used here (`_posX`, `_posY`, `_sectionDir`, `_powerGenerator`, `_objectName`, `_hqObject`, `_guardtower`, `_index`, `_objpos`) — copy/paste tech debt (RD candidate). (b) Mod-classname fragility: every class string is hardcoded modern-Arma vanilla; a mod set lacking a class silently produces an errored/empty object (RD candidate — shared with the whole template family). (c) The HQ-AA branch depends on object placement order and a magic class-name string match (`"Land_Cargo_HQ_V1_F"`), and is unreachable from the current caller (RD/Q candidate). (d) `setVehicleAmmo` is applied here despite the inline comment that it "cannot be used until Ammo Depots rearm all vehicles" — possibly ineffective/overwritten later (Q candidate). (e) Element-shape of the published `a3e_var_Escape_MotorPoolPositions` is set by the caller, not here — see BUG-024 note under diffs.
+- **Reforger port notes:** In Enfusion these compositions should be authored as prefab/composition entities placed by the world/game-mode logic, not replayed as per-object script spawns. The relative-offset + rotate pattern maps to a parent prefab with child slots. Randomized fuel/damage/ammo and the "steal transport" loop map to Reforger vehicle components. The Map-Builder-export approach (hundreds of hardcoded `createVehicle` calls) is exactly the anti-pattern to replace with a data-driven prefab. Class-name-per-mod fragility disappears if compositions are per-faction prefabs.
 
-### a3e_fnc_BuildMotorPool_SPE  —  `Code/functions/Templates/fn_BuildMotorPool_SPE.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildMotorPool_SPE  —  `Code/functions/Templates/fn_BuildMotorPool_SPE.sqf`  ·  _status: documented_
+- **Purpose:** SPE (Spearhead 1944, WWII) variant of the motor pool. Same role and interface as `BuildMotorPool`, but the composition uses WWII-era SPE assets (hedgehogs, sandbags, dugouts, timber-log walls, German fuel barrels, ammo boxes) instead of modern razorwire/HBarrier/CSAT.
+- **Inputs:** Identical param signature (`_center`, `_rotation`, `_staticWeaponClasses`, `_parkedVehicleClasses`, `_parkedArmorClasses`, `_staticAAClasses`) read the same way. Reads `A3E_VAR_Side_Opfor`. Does **not** read `A3E_VAR_Flag_Opfor` (no flag object in this composition).
+- **Outputs:** Spawns SPE static objects (`Land_SPE_HedgeHog`, `Land_SPE_Sandbag_*`, `Land_SPE_Dugout_*`, `Land_SPE_BarbedWire_*`, `Land_SPE_Netting_*`, `Land_SPE_Fuel_Barrel_German`, `Land_SPE_Ammobox_German_02_Covered`, `Land_TimberLog_05_F`, `Land_SPE_Wood_TrenchLogWall_*`, two `EmptyDetector`s). Optionally **two** static weapons + gunners (vs one in the base), one parked armor, and up to **two** parked vehicles (base allows three). Same `A3E_MotorPoolMapMarker`/`A3E_MotorPoolPatrolMarker` markers and `A3E_MotorPoolMarkerNumber` counter. Cleanup radius is **25** (base 50).
+- **Calls:** Same helpers/callees as base, plus notable differences in the helper: its inline `_fnc_createObject` uses `params[...]` with signature `["_className","_centerPos","_relativePos","_rotateDir","_relativeDir"]`, carries the center's Z into the rotated position, does an extra `setPosATL`, and `diag_log`s every class name (debug spam). It has **no** HQ-AA special case. `_fnc_CreateVehicle` also adds a `setPos`.
+- **Called by:** Indirect. Registered as `A3E_MotorPoolTemplates = ["A3E_fnc_BuildMotorPool_SPE"]` in the SPE mod configs (`Mods/SPE US vs GER/UnitClasses.sqf:491`, `Mods/SPE GER vs US/UnitClasses.sqf:577`); dispatched by `fn_createMotorPools.sqf` via `A3E_fnc_callRandomFunction` exactly as the base.
+- **Processing / how it differs:** Same skeleton (marker number → params → helpers → cleanup → object list → statics/armor/vehicles → markers). Key diffs: rotation is pre-adjusted with `_rotation = _rotation + 180` inside the function (base applies the -180 at the call site instead); helper takes args in a different order and Z-aware; several commented-out lines mark where the original export had vehicles/MGs (`SPE_ST_MG34_Bipod`, `B_MBT_01_TUSK_F`, `B_Truck_01_cargo_F`, `B_MRAP_01_gmg_F`) that are now supplied via the class-array params instead; two static-gun emplacements; max two parked vehicles; no flag; smaller cleanup radius; `diag_log` per object.
+- **Reforger port notes:** Same prefab-composition recommendation. The WWII asset set is just a different faction/era prefab; the per-object script replay and the `diag_log` spam should not be carried over.
 
-### a3e_fnc_BuildMotorPool_VN  —  `Code/functions/Templates/fn_BuildMotorPool_VN.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_BuildMotorPool_VN  —  `Code/functions/Templates/fn_BuildMotorPool_VN.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire (Vietnam) variant of the motor pool. Same role/interface as the base; composition uses SOGPF/Vietnam assets (US airbase revetments, quonset huts, hootch, guard boxes, VN razorwire, US flag, garbage/clutter) — modeled as a US firebase-style vehicle park.
+- **Inputs:** Identical param signature and reading. Reads `A3E_VAR_Flag_Opfor` (applied to a `vn_flag_usa`) and `A3E_VAR_Side_Opfor`.
+- **Outputs:** Spawns VN/SOGPF static objects (`Land_vn_razorwire_f`, `Land_vn_usaf_revetment_*`, `Land_vn_quonset_*`, `Land_vn_hootch_01_13`, `Land_vn_strazni_vez`/`Land_vn_hlaska` towers, `Land_vn_guardbox_*`, `vn_flag_usa`, plus shared modern clutter like `Land_Workbench_01_F`, `Land_MetalBarrel_F`, `Oil_Spill_F`). Optionally **one** static weapon + gunner, one parked armor, and up to **three** parked vehicles (like base: 1st unconditional, 2nd >0.5, 3rd >0.75). Same markers and `A3E_MotorPoolMarkerNumber` counter. Cleanup radius **50** (like base).
+- **Calls:** Same as base; uses the **same helper implementation as the SPE variant** (`params`-based, Z-aware `_fnc_createObject` with `setPosATL` and a per-object `diag_log`; `_fnc_CreateVehicle` with extra `setPos`). No HQ-AA special case.
+- **Called by:** Indirect. Registered as `A3E_MotorPoolTemplates = ["A3E_fnc_BuildMotorPool_VN"]` in the SOGPF mod configs (`Mods/SOGPF MACV vs PAVN-VC/UnitClasses.sqf:598`, `Mods/SOGPF PAVN vs ANZAC-ROK/UnitClasses.sqf:508`, `Mods/SOGPF PAVN vs MACV-ARVN/UnitClasses.sqf:557`); dispatched by `fn_createMotorPools.sqf` via `A3E_fnc_callRandomFunction`.
+- **Processing / how it differs:** Same skeleton. Diffs vs base: VN/SOGPF asset set; flag is `vn_flag_usa` (still textured from `A3E_VAR_Flag_Opfor`); rotation is used as passed (relies on the caller's `dir-180`, matching base — it does NOT add 180 internally like SPE does); one static gun (like base, unlike SPE's two); up to three vehicles (like base); `diag_log` per object (like SPE). Diffs vs SPE: three vehicles not two, one gun not two, keeps a flag, cleanup 50 not 25, no internal +180.
+- **Reforger port notes:** Same prefab recommendation; VN assets are another faction/era prefab. Same note to drop per-object script replay and `diag_log` spam.
 
 ### a3e_fnc_BuildPrison  —  `Code/functions/Templates/fn_BuildPrison.sqf`  ·  _status: documented_
 - **Purpose:** One of six interchangeable prison "start position" layouts where captured players begin. This variant is an **open compound**: a ring of `Land_HBarrier_*` (H-barrier) walls around a courtyard, entered through a large `Land_City_Gate_F`, with a campfire/camping-chairs sitting area, flagpole, and floodlit generator corners. Map Builder export. See `a3e_fnc_BuildPrison1` for the full shared-contract writeup; this entry notes only how it differs.
@@ -366,188 +360,166 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Unresolved issues:** Shares family-wide issues (duplication, no cleanup, hardcoded classnames) + building-as-gate assumption.
 - **Reforger port notes:** Same as `BuildPrison1`; two-door slum-house door entity raises the open event.
 
-### a3e_fnc_CrashSite  —  `Code/functions/Templates/fn_CrashSite.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_CrashSite  —  `Code/functions/Templates/fn_CrashSite.sqf`  ·  _status: documented_
+- **Purpose:** Places a lootable helicopter/vehicle crash-site "camp" at a given position: a wreck object, rising smoke FX, two dead crew, and a nearby ammo box seeded with weapons/items. One of the procedural side-objectives players can find and loot after escaping.
+- **Inputs:** `_this select 0` = `_position` (via `BIS_fnc_param`) — world position from the caller. Server-only (`if(!isServer) exitWith {}`). Reads several class-list globals from `Units\UnitClasses.sqf` / mod `UnitClasses.sqf`: `a3e_arr_CrashSiteWrecks`, `a3e_arr_CrashSiteCrew`, `a3e_arr_CrashSiteWrecksCar`, `a3e_arr_CrashSiteCrewCar` (car variant chosen 50/50 only if the car array is non-empty), `a3e_arr_CrashSiteWeapons`, `a3e_arr_CrashSiteItems`, `a3e_arr_AmmoDepotCrate_CrashSite` (default `["Box_NATO_Wps_F"]`), and `A3E_VAR_Side_Blufor`. Also reads/writes the counter global `a3e_CrashSiteMarkerNo`.
+- **Outputs:** Side effects — spawns a wreck vehicle, a map marker, a smoke-FX effect (remoteExec'd to all), an ammo box filled with weapon/magazine/item cargo, and two dead crew units in a new BLUFOR group. No meaningful return value (last expression is the trailing `};`). Writes global `a3e_CrashSiteMarkerNo`. Logs `"fn_CrashSite: Camp created at %1"` via `diag_log`.
+- **Calls:** `BIS_fnc_param`; `A3E_fnc_createLocationMarker`; `A3E_fnc_FireSmokeFX` (via `remoteExec [...,0,true]`); engine `createVehicle`, `createGroup`, `createUnit`, `findEmptyPosition`, `clearWeaponCargoGlobal`/`clearMagazineCargoGlobal`/`clearItemCargoGlobal`, `addWeaponCargoGlobal`/`addMagazineCargoGlobal`/`addItemCargoGlobal`, `setDammage`.
+- **Called by:** `Server/fn_CreateCrashSites.sqf:4` — `[_pos] spawn A3E_fnc_crashSite;` (the LIVE caller; that function loops `CrashSiteCountMax` times and is called from `fn_initServer.sqf:231`). Also referenced at `fn_initServer.sqf:435` (`[_pos] call A3E_fnc_crashSite`) but that line is inside the DEAD `if(false)` legacy block (`fn_initServer.sqf:251-441`) and never executes. See _xref.md `## Templates`.
+- **Processing:** (1) Choose wreck+crew arrays (car vs default). (2) `createVehicle` the wreck at `_position` with random direction. (3) Increment/initialise `a3e_CrashSiteMarkerNo`, place a green `hd_warning` location marker. (4) Pick a random smoke size and remoteExec `A3E_fnc_FireSmokeFX`. (5) `findEmptyPosition` for the ammo box; if found, create it, clear its cargo, then two probability-driven loops over `a3e_arr_CrashSiteWeapons` (weapon + its magazines) and `a3e_arr_CrashSiteItems`, pushing chosen entries and adding them to the box via `forEach`. (6) Create two crew units at the box, `setDammage 1` (dead). All box/crew work is nested inside the `if(count _boxpos > 0)` guard.
+- **Theory of operation:** Data-driven placement composition — the wreck, loot table, and crew are all class-list globals swapped per mod, so the same code produces era-appropriate crash sites (WW2, Vietnam, modern) without edits. Marker + smoke make it discoverable; the loot box is the reward.
+- **Whys & questions:** Dead crew are spawned as **BLUFOR** (`A3E_VAR_Side_Blufor`) regardless of the wreck faction — presumably "downed friendly aircraft" narrative, but for enemy/car wrecks the side is thematically arbitrary. The car branch fires only when `a3e_arr_CrashSiteWrecksCar` is populated, so most templates always use the heli path.
+- **Unresolved issues:** RD candidate — heavy inline duplication of the ammo-box weapon/item probability loops (near-identical logic appears in the `AmmoDepot*` composition functions and `fn_CrashSite` here; could be a shared `fillAmmoBox` helper). `_TypeOfWreck`/`_typeOfUnit` are declared inconsistently (`_typeOfUnit` not in the top `private` list). Casing noise (`A3E_fnc_crashSite` vs `A3E_fnc_CrashSite`) — RD-008 style, not a bug. The whole loot-fill block silently does nothing if `findEmptyPosition` fails (no fallback), so a crash site in tight terrain may spawn wreck+smoke+marker but no box/crew.
+- **Reforger port notes:** In Enfusion this becomes a prefab (wreck + particle emitter + supply/arsenal container) instantiated at a spawn point, with the loot table driven by a config/data class rather than SQF class-list globals. Smoke = a particle effect component on the prefab (no remoteExec needed — replicated by the entity). Dead crew = character prefabs spawned in a ragdoll/dead state.
 
-### a3e_fnc_LoadTemplates  —  `Code/functions/Templates/fn_LoadTemplates.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_LoadTemplates  —  `Code/functions/Templates/fn_LoadTemplates.sqf`  ·  _status: documented_
+- **Purpose:** Boots the "Iso" data-template system at mission start: reads the configured list of template names, loads each corresponding `Code/templates/<name>.sqf` data file, and stores the parsed templates in the global `A3E_Templates` for later restore (currently used by the roadblock system).
+- **Inputs:** No parameters. Reads global `A3E_RoadblockTemplates` (default `["rb_bis_rb1","rb_bis_rb2","rb_bis_rb3"]` — set per-mod/island before this runs). Reads the template files at `templates\<name>.sqf`.
+- **Outputs:** Writes two globals: `A3E_RoadblockTemplates` (rewritten in place with any missing/failed names pruned out) and `A3E_Templates` (array of parsed template pair-lists). Logs a success/error line via `A3E_fnc_Log`.
+- **Calls:** `A3E_fnc_Log`; engine `fileExists`, `preprocessFileLineNumbers`, `call compile`, and the local `throw`/`catch` exception mechanism. Loads/executes each data file `templates\<name>.sqf` (which evaluates to a pair-list literal — see `Code/templates/rb_bis_rb1.sqf`).
+- **Called by:** `Server/fn_initServer.sqf:69` — `[] call a3e_fnc_loadTemplates;` (early in server init, right after unit classes are loaded). Single caller. See _xref.md `## Templates`.
+- **Processing:** (1) Read `A3E_RoadblockTemplates` into `_roadblocks`. (2) Define local `_loadTemplatesFromFiles` closure: `forEach` the names — build path `templates\<name>.sqf`, `throw` if the file is missing, else `call compile preprocessFileLineNumbers` it and `pushBack` the result into `_missionTemplates`, counting successes; on any exception, `diag_log` it and remove the offending name from `_roadblocks` via `deleteAt (find _x)`. (3) Write the pruned `_roadblocks` back to `A3E_RoadblockTemplates`. (4) Run the closure with `[_roadblocks,_templates]`; if zero loaded, log an ERROR, else log the count. (5) Store `_templates` into `A3E_Templates`.
+- **Theory of operation:** Separates template *identity* (a name list, configurable per mod/island) from template *data* (SQF pair-list files under `Code/templates/`). This lets the roadblock system pick a random template by name and reconstruct a whole fortified composition from serialized data — no hand-placed compositions per map. It is the load half of the Iso pipeline: `LoadTemplates` (load) → `IsoTemplateRestore` (rebuild at runtime), with `IsoTemplateStore` being the offline authoring/export tool.
+- **Whys & questions:** Mutating `_roadblocks` (via `deleteAt`) *inside* the `forEach` over `_templates` works only because the closure iterates `_templates` (the initially-empty output? — note it's called as `[_roadblocks,_templates]` so `_templates`=params#0=`_roadblocks`, `_missionTemplates`=params#1=`_templates`; the `forEach _templates` therefore iterates the name list while `deleteAt`-ing from the *same* array `_roadblocks`). Modifying the array being iterated is fragile but tolerated here because `deleteAt` only fires in the failure path. The default list is BIS-only; mod builds must override `A3E_RoadblockTemplates` (e.g. `rb_vn_*`, `rb_gm_*`, `rb_spe_*`) or roadblocks silently fall back to vanilla templates that may not exist for that mod.
+- **Unresolved issues:** BUG/RD candidate — deleting from `_roadblocks` while iterating a parallel array by index-of-value is order-sensitive; a duplicate name would delete the wrong element. Naming is misleading: the function and globals say "Roadblock" but the system is generic ("A3E_Templates"), so any future non-roadblock template would still be gated by `A3E_RoadblockTemplates`. Casing noise (`loadTemplates` vs `LoadTemplates`, RD-008).
+- **Reforger port notes:** Enfusion loads compositions/prefabs from config or `.et` layout files, not by `call compile` of SQF text. Port target: a config array of composition resource names, loaded/validated at world init; the "prune missing" behavior maps to skipping unresolved resource references with a warning. `A3E_Templates`/`A3E_RoadblockTemplates` become a data-class list on the game-mode component.
 
-### a3e_fnc_MortarSite  —  `Code/functions/Templates/fn_MortarSite.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_MortarSite  —  `Code/functions/Templates/fn_MortarSite.sqf`  ·  _status: documented_
+- **Purpose:** Vanilla-era enemy mortar-site composition (Eden/Map-Builder export). Builds a sandbag-ringed emplacement around one **manned** mortar/artillery static that the AI artillery subsystem can fire, and that players may destroy to reduce incoming artillery. Places the map/patrol markers so the site becomes a defended location zone.
+- **Inputs:** `_this` — array; element `[0]` = `_position` (site center, AGL/world pos), read via `bis_fnc_param`. Reads global `a3e_arr_MortarSite` (per-mod array of mortar static classnames, e.g. `"O_Mortar_01_F"`), `A3E_VAR_Side_Opfor`. Reads/creates counter global `A3E_MortarMarkerNumber`. Preconditions: server scope; `a3e_arr_MortarSite`, `a3e_var_artillery_units`, and the side globals must be initialized (done in mod `UnitClasses.sqf` / `config.sqf` before dispatch).
+- **Outputs:** No meaningful return (last statement is a `setMarkerSizeLocal`). Side effects: `createVehicle`s ~8 `Land_BagFence_*` fortification props plus one mortar static; spawns a gunner via `A3E_fnc_AddStaticGunner` (async `spawn`); **pushes the mortar object onto global `a3e_var_artillery_units`** (consumed by `A3E_fnc_FireArtillery`); increments `A3E_MortarMarkerNumber`; creates a shown location map-marker `"A3E_MortarSiteMapMarker"+N` (icon `o_mortar`) and a hidden 50×50 ellipse patrol marker `"A3E_MortarSitePatrolMarker"+N` (local markers).
+- **Calls:** `bis_fnc_param`; `createVehicle` / `createvehicle` (engine); `setdir` / `setpos` (engine); `A3E_fnc_AddStaticGunner` (via `spawn`); `A3E_fnc_createLocationMarker`; `createMarkerLocal` + `setMarker*Local` (engine).
+- **Called by:** Not called directly. Dispatched by `Server/fn_createMortarSites.sqf:95` via `[[_x],_mortarSiteTemplates] call A3E_fnc_callRandomFunction` (which `selectRandom`s one entry of the template-name array and `call`s it with the position). The template-name array is `A3E_MortarSiteTemplates`, set **per-mod in `Mods/{Mod}/UnitClasses.sqf`** (e.g. `Mods/Vanilla/UnitClasses.sqf:1504` = `["A3E_fnc_MortarSite"]`), with a hardcoded default `["A3E_fnc_MortarSite","A3E_fnc_MortarSite2"]` in `fn_createMortarSites.sqf:93` when the global is unset. Registration is **not** in `fn_LoadTemplates.sqf`. `fn_createMortarSites` is itself run from server init (`fn_initServer` chain), gated on `A3E_Param_Artillery` and site count `A3E_MortarSiteCountMin/Max`.
+- **Processing:** (1) Init/increment `A3E_MortarMarkerNumber` into local `_number`. (2) `_position` = param 0. (3) For each composition element: compute `_objpos = _position vectorAdd <offset>`, `createVehicle` the prop, then `setdir` + `setpos`. (4) For the mortar element: `createVehicle [selectRandom-style pick from a3e_arr_MortarSite, _objpos, [], 0, "NONE"]`, spawn a gunner onto it (`A3E_fnc_AddStaticGunner` with Opfor side), `pushBack` the object to `a3e_var_artillery_units`, then orient/position it. (5) Create the visible `o_mortar` location marker and the hidden ellipse patrol marker, both suffixed with `_number`.
+- **Theory of operation:** A static Eden export replayed at runtime at a procedurally chosen position. Because the mortar is manned (`moveInGunner` in `AddStaticGunner`) and registered in `a3e_var_artillery_units`, it is a *functional* artillery piece: `A3E_fnc_FireArtillery` iterates that global to deliver indirect fire on detected players. The paired markers let `fn_createMortarSites` wire the site into the patrol/location-zone system (`A3E_fnc_initLocationZone` is called by the dispatcher, not here). The mod-indirected template array (`A3E_MortarSiteTemplates`) lets each faction/era pick an era-appropriate composition function while sharing the same dispatcher and artillery plumbing.
+- **Whys & questions:** Composition-export style (hardcoded offsets, one `_obj`/`_objpos`/`_dir` reused per element) is machine-generated by the "Eden Object composition to SQF" tool — intentional, not hand-written. The mortar classname is drawn from `a3e_arr_MortarSite` (per-mod) while the *composition* is chosen from `A3E_MortarSiteTemplates` (also per-mod) — two parallel per-mod indirections that must stay consistent (a composition and its classnames come from the same mod's `UnitClasses.sqf`). Random-pick uses `select(floor(random(count ...)))` instead of `selectRandom` — style noise (RD-008-adjacent), not a bug.
+- **Unresolved issues:** `A3E_MortarMarkerNumber` and the pushes to `a3e_var_artillery_units` are unsynchronized globals — fine if all mortar-site creation is single-threaded on the server, which it appears to be. No cleanup path: props, gunner, mortar, and both markers are never removed by this function; the artillery global is not pruned when a mortar is destroyed, so `FireArtillery` may iterate dead objects (mitigated only by `alive`/side checks in that function — verify). `_gunner` return of the async `spawn` is captured but unused. `_number`/`_position` etc. are not `private`-declared at the top (`_obj/_objpos/_dir/_gunner` are), harmless at function scope. Marker names collide across sessions only if `A3E_MortarMarkerNumber` is not reset per mission (it persists in missionNamespace) — low risk.
+- **Reforger port notes:** In Enfusion, model as a prefab/composition (World Editor) spawned via a spawn manager rather than an SQF replay of `createVehicle` calls; the mortar should be an entity with a manned turret or a scripted indirect-fire component. Replace the flat `a3e_var_artillery_units` global with a registry/component the artillery system queries, and register/deregister on spawn and on death so destroyed pieces stop firing. Markers → map-marker UI/entities. Per-mod classname/composition indirection maps to config/prefab variants selected by faction.
 
-### a3e_fnc_MortarSite2  —  `Code/functions/Templates/fn_MortarSite2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_MortarSite2  —  `Code/functions/Templates/fn_MortarSite2.sqf`  ·  _status: documented_
+- **Purpose:** Variant of MortarSite — a second vanilla-era mortar-site composition, provided so the dispatcher can pick between two layouts when `A3E_MortarSiteTemplates` lists both.
+- **Inputs/Outputs/Calls/Called by:** Identical contract to `a3e_fnc_MortarSite` (same `_position` param, same `a3e_arr_MortarSite` / `A3E_VAR_Side_Opfor` reads, same `a3e_var_artillery_units` push, same marker creation and dispatch path). Registered only via the **default** template array in `fn_createMortarSites.sqf:93` (`["A3E_fnc_MortarSite","A3E_fnc_MortarSite2"]`); no shipped `Mods/*/UnitClasses.sqf` lists it explicitly (grep of `A3E_MortarSiteTemplates` shows CSLA/SOGPF/SPE/Vanilla each listing a single, different function).
+- **Differences:** In the copy read, **byte-for-byte identical to `fn_MortarSite.sqf`** — same 8 `Land_BagFence_*` props, same offsets, same directions, same mortar block. Effectively a duplicate; the "2" gives the dispatcher a second entry but produces the same composition.
+- **Whys & questions / Unresolved issues:** Candidate BUG/RD — `fn_MortarSite2` appears to be an un-diverged copy of `fn_MortarSite` (intended to be a distinct layout but never changed, or a leftover). If duplication is intentional it merely doubles the odds of the same layout. Same no-cleanup / unsynchronized-global caveats as MortarSite.
+- **Reforger port notes:** Same as MortarSite; likely collapse into a single prefab (or make it a genuinely distinct variant) rather than porting a duplicate.
 
-### a3e_fnc_MortarSite_spe1  —  `Code/functions/Templates/fn_MortarSite_spe1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_MortarSite_spe1  —  `Code/functions/Templates/fn_MortarSite_spe1.sqf`  ·  _status: documented_
+- **Purpose:** Variant of MortarSite — SPE (Spearhead 1944, WWII) dugout mortar emplacement. Registered for SPE mods.
+- **Differences:** Same skeleton/contract as MortarSite (same `_position` param, `A3E_MortarMarkerNumber` counter, `a3e_arr_MortarSite` pick, `AddStaticGunner` on Opfor, push to `a3e_var_artillery_units`, `o_mortar` + hidden-ellipse markers). Differs in the **composition props**: WWII-themed `Land_TimberLog_05_F`, `Land_SPE_Sandbag_*`, `Land_SPE_Dugout_*` (3m/6m/6m45/sandbags/cover/decal), `Land_SPE_Wood_TrenchLogWall_01_4m_v2`, `Land_SPE_Ammobox_German_02_Covered` — a dug-in trench layout, more elements than the vanilla bag-fence ring. Header comments note "SPE Mortar 1 / Both sides, dugout" and credit the NeoArmageddon export tool; one composition line for the mortar is left as a commented-out `_fnc_createObject` reference. Mortar classnames come from the SPE mod's `a3e_arr_MortarSite` (e.g. `"SPE_ST_GrW278_1"` in `Mods/SPE US vs GER/UnitClasses.sqf:982`). Registered via `A3E_MortarSiteTemplates = ["A3E_fnc_MortarSite_spe1"]` in the SPE mods' `UnitClasses.sqf` (e.g. `Mods/SPE US vs GER/UnitClasses.sqf:974`, `Mods/SPE GER vs US/UnitClasses.sqf:1084`).
+- **Whys & questions / Unresolved issues:** Same manned/functional-artillery behavior and same no-cleanup, unsynchronized-global, and hardcoded-classname-fragility caveats as MortarSite; the SPE object classnames make it hard-dependent on the SPE mod being loaded (per-mod registration guards this).
+- **Reforger port notes:** Same as MortarSite; WWII faction/prefab variant.
 
-### a3e_fnc_MortarSite_vn_nva1  —  `Code/functions/Templates/fn_MortarSite_vn_nva1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_MortarSite_vn_nva1  —  `Code/functions/Templates/fn_MortarSite_vn_nva1.sqf`  ·  _status: documented_
+- **Purpose:** Variant of MortarSite — SOG Prairie Fire (Vietnam) **NVA** mortar pit. Registered for the SOGPF mods where the enemy/Opfor side is NVA/PAVN.
+- **Differences:** Same skeleton/contract as MortarSite (counter, `_position` param, `a3e_arr_MortarSite` pick, `AddStaticGunner` on Opfor, push to `a3e_var_artillery_units`, `o_mortar` + hidden-ellipse markers). Much smaller composition — only **two** props: `Land_vn_o_bunker_02` (bunker) and `Land_vn_us_ammobox_small_06` (ammo box) plus the mortar. Header: "VN NVA Mortar 1 / Mortar Pit". Mortar classnames from the SOGPF mod's `a3e_arr_MortarSite` (NVA statics, e.g. `vn_o_nva_static_mortar_type53/type63`, `vn_o_nva_static_h12` in `Mods/SOGPF MACV vs PAVN-VC/UnitClasses.sqf:1266`). Registered via `A3E_MortarSiteTemplates = ["A3E_fnc_MortarSite_vn_nva1"]` in `Mods/SOGPF MACV vs PAVN-VC/UnitClasses.sqf:1258`.
+- **Whys & questions / Unresolved issues:** Note the ammo-box prop is a `_us_` classname on an NVA site — cosmetic mismatch, harmless. Same manned/functional-artillery, no-cleanup, unsynchronized-global, and mod-classname-fragility caveats as MortarSite.
+- **Reforger port notes:** Same as MortarSite; Vietnam NVA faction/prefab variant.
 
-### a3e_fnc_MortarSite_vn_us1  —  `Code/functions/Templates/fn_MortarSite_vn_us1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_MortarSite_vn_us1  —  `Code/functions/Templates/fn_MortarSite_vn_us1.sqf`  ·  _status: documented_
+- **Purpose:** Variant of MortarSite — SOG Prairie Fire (Vietnam) **US** mortar pit. Registered for SOGPF mods where the enemy/Opfor side is US-aligned.
+- **Differences:** Same skeleton/contract as MortarSite and near-identical to `_vn_nva1` — **two** props plus the mortar, but using `Land_vn_b_mortarpit_01` (US mortar pit) instead of the NVA bunker, plus `Land_vn_us_ammobox_small_06`; different offsets/directions. Header: "VN US Mortar 1 / Mortar Pit". Note it still spawns the gunner on `A3E_VAR_Side_Opfor` and pushes to `a3e_var_artillery_units` exactly like the others — the "US" here refers to the *composition/props era*, while the mounted side follows the mission's Opfor mapping. Mortar classnames from that mod's `a3e_arr_MortarSite`. Registered via `A3E_MortarSiteTemplates = ["A3E_fnc_MortarSite_vn_us1"]` in the corresponding SOGPF `UnitClasses.sqf` (SOGPF mod set at `.../UnitClasses.sqf` ~line 1108–1216).
+- **Whys & questions / Unresolved issues:** `_vn_us1` and `_vn_nva1` differ only by two prop classnames/offsets — candidate RD (near-duplicate variants that could be one parameterized function). Same manned/functional-artillery, no-cleanup, unsynchronized-global, and mod-classname-fragility caveats as MortarSite.
+- **Reforger port notes:** Same as MortarSite; Vietnam US-era faction/prefab variant.
 
-### a3e_fnc_Roadblock  —  `Code/functions/Templates/fn_Roadblock.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_Roadblock  —  `Code/functions/Templates/fn_Roadblock.sqf`  ·  _status: documented_
+- **Purpose:** Map-Builder / Eden composition exporter for a small enemy checkpoint (bunker tower + H-barriers + razorwire). Given a road position and rotation, it spawns the props in world space and optionally places a caller-supplied static weapon and vehicle at fixed relative slots. One of six roadblock composition variants.
+- **Inputs:** `params ["_center", "_rotation", ["_static", objNull], ["_vehicle", objNull]]`. `_center` = world position (composition origin), `_rotation` = degrees to rotate the whole composition, `_static` = optional pre-existing static-weapon object to reposition into the tower slot, `_vehicle` = optional pre-existing vehicle object to reposition. Reads no global state directly; depends on `A3E_fnc_rotatePosition` and `a3e_fnc_cleanupTerrain` being defined. Relies on Arma vanilla ("_F") building classnames.
+- **Outputs:** Returns `_objects` — array of the created prop objects (bunker tower, 2× `Land_HBarrier_5_F`, 2× `Land_Razorwire_F`). Side effects: `createVehicle`s those props into the world; clears a 25 m radius of terrain clutter/objects at `_center`; repositions (does NOT create) the passed-in `_static` and `_vehicle` if non-null. Does not spawn any units/crew itself; no markers; no remoteExec; no cleanup handler registered.
+- **Calls:** `a3e_fnc_cleanupTerrain` (clear terrain at center), `A3E_fnc_rotatePosition` (rotate each relative offset around `_center`). Engine: `createVehicle`, `setDir`, `setVectorUp`/`surfaceNormal`, `setPosATL`.
+- **Called by:** **No direct callers found.** This function is registered in `Code/include/functions.hpp` as `class Roadblock` (→ `a3e_fnc_Roadblock`) but nothing in the codebase invokes it (no `call`/`spawn`/`execVM`, not present in any template array). The **live** roadblock path does NOT use these functions: `Server/fn_RoadBlocks.sqf` reads `A3E_RoadblockTemplates` (plain data-template names such as `"rb_bis_rb1"`, NOT `a3e_fnc_*` names), which `Templates/fn_LoadTemplates.sqf` loads from `templates\<name>.sqf` Iso-format data files into `A3E_Templates`, then reconstructs via `a3e_fnc_IsoTemplateRestore`. These `fn_Roadblock*.sqf` exporters appear to be the orphaned source compositions those Iso templates were derived from. See `_xref.md` (Roadblock entries have no incoming callers).
+- **Processing:** (1) `cleanupTerrain` at `_center`, r=25. (2) If `_vehicle` non-null, compute its rotated slot and reposition/reorient it. (3) `createVehicle` `Land_BagBunker_Tower_F` at its rotated slot (dir + rotation + 180). (4) If `_static` non-null, reposition it into the tower firing slot (elevated ~2.75 m). (5) `createVehicle` the two `Land_HBarrier_5_F` (stacked, one raised ~1.3 m) and two `Land_Razorwire_F`, each rotated. (6) push each created prop to `_objects`; return `_objects`.
+- **Theory of operation:** A Map-Builder export follows a rigid per-object pattern: take a hardcoded relative offset, rotate it about the composition center via `A3E_fnc_rotatePosition`, create the object, then add `_rotation` to its baked-in facing and conform it to the terrain normal. `_static`/`_vehicle` are passed IN (created by the caller) so the caller owns crewing/AI; the composition only owns geometry and placement. In the live system this same "place props, reserve slots for a static and a vehicle" contract is expressed as Iso-template metadata instead of code.
+- **Whys & questions:** Why keep six standalone `fn_Roadblock*` functions registered in `functions.hpp` if the runtime uses Iso data templates (`rb_bis_rb*`) instead? Likely they are the authoring artifacts (hand-built in Map Builder, later converted to Iso format) left registered for reference or manual/debug use. Open question: is any of them reachable through a debug/console path or an out-of-repo mission script? None found in-repo.
+- **Unresolved issues:** Dead code / duplication risk — six registered functions with no callers duplicate the live `templates\rb_*.sqf` compositions; drift between the two representations is possible (candidate RD). Hardcoded vanilla classnames make this Arma-3/mod-specific. `_pos` is declared `private` and reused as scratch across blocks (harmless). Casing mismatch `A3E_fnc_rotatePosition` vs `a3e_fnc_cleanupTerrain` is style noise (RD-008), not a bug.
+- **Reforger port notes:** In Enfusion, compositions are first-class prefabs (`.et`), so hand-exported placement code like this disappears entirely — author the checkpoint as a composition/prefab and place it via the world editor or a spawn system. The "reserve a slot for a static weapon and a manned vehicle" idea maps to prefab slots / spawn points on the composition. Terrain-conform (`setVectorUp surfaceNormal`) is handled by the engine's surface snapping. Decide during port whether to carry these variants forward at all, or regenerate from the live Iso templates.
 
-### a3e_fnc_Roadblock2  —  `Code/functions/Templates/fn_Roadblock2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_Roadblock2  —  `Code/functions/Templates/fn_Roadblock2.sqf`  ·  _status: documented_
+- **Purpose:** Variant of Roadblock — a lighter "bar-gate + sandbag-fence" checkpoint composition. Same `[_center,_rotation,_static,_vehicle]` contract and export style.
+- **Inputs:** Same params as Roadblock. Same dependencies (`a3e_fnc_cleanupTerrain`, `A3E_fnc_RotatePosition`).
+- **Outputs:** Returns `_objects` array of created props. Side effects: clears terrain r=25; createVehicles props; repositions passed-in `_static`/`_vehicle`. Spawns no units. No markers/remoteExec/cleanup.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_RotatePosition` (invoked indirectly through a local `_fnc_createObject` helper). Engine `createVehicle`/`setDir`/`setPosATL`/`setVectorUp`.
+- **Called by:** **No direct callers** (same as Roadblock — registered as `a3e_fnc_Roadblock2`, not referenced anywhere; live path uses Iso `rb_*` templates).
+- **Processing:** Differences from Roadblock: introduces a local `_fnc_createObject {className,centerPos,relativePos,rotateDir,relativeDir,[align]}` helper that encapsulates rotate→create→setdir→align (this helper pattern recurs in all later variants). Props: 1× `Land_BarGate_F` (gate across the road) + 4× `Land_BagFence_Round_F` + 4× `Land_BagFence_End_F`. `_static` slot at +x side (dir 269.87), `_vehicle` slot at -x side (dir 89.86). No bunker tower here.
+- **Theory of operation:** Same rotate-and-place contract as Roadblock, but factored through `_fnc_createObject` for brevity. Uses `createVehicle [class,pos,[],0,"CAN_COLLIDE"]` array form (vs simple `createVehicle` in Roadblock).
+- **Whys & questions:** Why the `_fnc_createObject` refactor appears from #2 onward but not #1 — suggests #1 is an older export, #2–4/vn are newer. Cosmetic; no behavioural consequence.
+- **Unresolved issues:** Same dead-code/duplication and mod-classname fragility as Roadblock. No static-weapon or unit spawning here — the `_static` is only repositioned if the caller supplied one; unlike vn variants, no `setVectorUp` on the static (minor terrain-clip risk on slopes).
+- **Reforger port notes:** Same as Roadblock; port as a prefab. Bar-gate is an animated/interactable prop — verify an Enfusion equivalent and whether it should be openable.
 
-### a3e_fnc_Roadblock3  —  `Code/functions/Templates/fn_Roadblock3.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_Roadblock3  —  `Code/functions/Templates/fn_Roadblock3.sqf`  ·  _status: documented_
+- **Purpose:** Variant of Roadblock — a "concrete-barrier + bunker tower" checkpoint. Heavier concrete look (`Land_CncBarrier_F`, `RoadBarrier_F`) than #2.
+- **Inputs:** Same params/contract as Roadblock. Same dependencies.
+- **Outputs:** Returns `_objects`. Side effects: terrain clear r=25; createVehicles props; repositions passed `_static`/`_vehicle`. No unit spawning, markers, remoteExec, or cleanup.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_RotatePosition` via local `_fnc_createObject`. Engine create/setdir/setpos/setVectorUp.
+- **Called by:** **No direct callers** (registered `a3e_fnc_Roadblock3`; unreferenced; live path uses Iso `rb_*`).
+- **Processing:** Differences: props are 1× `Land_BagBunker_Tower_F` + 9× `Land_CncBarrier_F` (concrete jersey barriers) + 2× `RoadBarrier_F`. `_static` slot elevated into the tower (+ rotation + 180, with `setVectorUp`); `_vehicle` slot behind at dir 180.256. Uses the same `_fnc_createObject` helper as #2.
+- **Theory of operation:** Identical rotate/place contract; only the object set and slot offsets differ, giving a visually distinct checkpoint style.
+- **Whys & questions:** The three vanilla styles (#1 razorwire/bunker, #2 sandbag/gate, #3 concrete/bunker) exist to vary checkpoint appearance across the procedurally placed roadblocks — but note the runtime picks from `rb_bis_rb1..3` Iso templates, not from these functions.
+- **Unresolved issues:** Same dead-code/duplication + mod-classname fragility. `_static` here does get `setVectorUp` (unlike #2), so behaviour is inconsistent across variants.
+- **Reforger port notes:** Same as Roadblock; prefab with concrete-barrier assets. Confirm Enfusion has jersey-barrier / road-barrier equivalents.
 
-### a3e_fnc_Roadblock4  —  `Code/functions/Templates/fn_Roadblock4.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_Roadblock4  —  `Code/functions/Templates/fn_Roadblock4.sqf`  ·  _status: documented_
+- **Purpose:** Variant of Roadblock — a much larger fortified checkpoint / mini-FOB (community "aussie" contribution) that additionally spawns a loot weapons crate. The most complex of the family.
+- **Inputs:** Same `[_center,_rotation,_static,_vehicle]` params. **Additional global read:** iterates `a3e_arr_AmmoDepotBasicWeapons` (weapon-loot definition array) to fill the crate.
+- **Outputs:** Returns `_objects`. Side effects beyond the others: creates a `Box_East_Wps_F` weapons crate near the composition, clears its cargo, and fills it with randomized weapons/magazines derived from `a3e_arr_AmmoDepotBasicWeapons` (probability/min/max/magazines-per-weapon roll). Terrain clear r=25; many props created; passed `_static`/`_vehicle` repositioned. Still spawns **no units/crew** itself.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_RotatePosition` via `_fnc_createObject`. Engine: `createVehicle`, cargo commands (`clearWeaponCargoGlobal`/`clearMagazineCargoGlobal`/`clearItemCargoGlobal`/`clearBackpackCargoGlobal`, `addWeaponCargoGlobal`, `addMagazineCargoGlobal`).
+- **Called by:** **No direct callers** (registered `a3e_fnc_Roadblock4`; unreferenced; live path uses Iso `rb_*`). Note there is no `rb_bis_rb4` in the default `A3E_RoadblockTemplates` (only rb1–rb3), though a `templates\rb_bis_rb4.sqf` file exists — so even the Iso analogue of #4 is not in the default rotation.
+- **Processing:** Differences: ~40 props (HBarriers of several sizes, concrete walls, bag fences, camo nets, power generator, T-tower, lamp, cargo tower `Land_Cargo_Patrol_V1_F`, bar gate, paper boxes). Two commented-out "STATIC GUNNER" and "VEHICLE" author notes hint the export originally embedded manned statics; in code only one `_static` and one `_vehicle` are repositioned. Then a weapons-loot block: for each entry in `a3e_arr_AmmoDepotBasicWeapons`, roll presence, compute a count, accumulate weapon+magazine cargo, and if non-empty create+fill `Box_East_Wps_F`. Note the `_obj = ... ` results are NOT pushed to `_objects` here (unlike other variants), so the returned array ends up whatever the last assignment was rather than the full prop list — likely an export bug.
+- **Theory of operation:** Same placement contract plus a loot mechanic borrowed from the ammo-depot system, turning this checkpoint into a lootable objective. The crate uses a fixed world offset (`_center` + [-11.78, 3.82, 0.1]) rather than a rotated slot, so the crate does not rotate with the composition.
+- **Whys & questions:** Why does #4 grow an ammo crate at all — probably to double as a weapon source for freshly-escaped players hitting a roadblock. Why is the crate position un-rotated while everything else rotates? Almost certainly an oversight (commented-out rotated version exists just below). Candidate Q/BUG.
+- **Unresolved issues:** (1) `_objects` is never appended to in the prop loop (each `_obj = ... call _fnc_createObject;` overwrites, no `pushBack`), so the return value is effectively just the last created object — a real defect if any caller relied on the returned list (BUG candidate). (2) Crate world-offset ignores `_rotation` (placement bug candidate). (3) `Box_East_Wps_F` is an OPFOR-flavored crate hardcoded regardless of the roadblock's actual side. (4) Same dead-code/duplication + mod-classname fragility as the family. (5) `_pos`/`_box`/`_weaponCount` used before `private` in places (scratch reuse) — style noise.
+- **Reforger port notes:** Port as a prefab plus a loot-spawn component. The weapon-crate loot logic should be unified with the port's ammo/loot system rather than re-implemented per composition. Fix the crate rotation and the `_objects` return when re-authoring. Replace side-specific crate classname with a faction-driven lookup.
 
-### a3e_fnc_Roadblock_vn1  —  `Code/functions/Templates/fn_Roadblock_vn1.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_Roadblock_vn1  —  `Code/functions/Templates/fn_Roadblock_vn1.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire (Vietnam) variant of the roadblock composition — "Pillbox Tower" checkpoint using SOGPF (`vn_`) assets. Same structure as the vanilla variants, era-specific classnames.
+- **Inputs:** Same `[_center,_rotation,_static,_vehicle]` params/contract. Depends on the SOGPF mod for `Land_vn_*` / `Land_vn_pillboxbunker_02_hex_f` classes.
+- **Outputs:** Returns `_objects` (created props). Side effects: terrain clear r=25; createVehicles the vn props; repositions passed `_static` (into the pillbox firing slot, elevated ~2.68 m, with `setVectorUp`) and `_vehicle`. No unit spawning, markers, remoteExec, or cleanup.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_RotatePosition` via `_fnc_createObject`.
+- **Called by:** **No direct callers** (registered `a3e_fnc_Roadblock_VN1`; unreferenced; live SOGPF path uses Iso `templates\rb_vn_rb1.sqf` listed in the SOGPF mods' `A3E_RoadblockTemplates`). This function is the source composition, not the runtime dispatch target.
+- **Processing:** Differences from vanilla: props are `Land_BarGate_F` + `Land_vn_bagfence_end_f` + 2× `Land_vn_bagfence_long_f` + `Land_vn_bagfence_round_f` + `Land_vn_bagfence_corner_f` + `Land_vn_pillboxbunker_02_hex_f` (the tower/static host). `_static` slot sits in the pillbox. Note the static/vehicle `A3E_fnc_rotatePosition` calls pass an extra 4th arg (e.g. `...,179.999`) that `rotatePosition` ignores — leftover from the export.
+- **Theory of operation:** Same rotate-and-place contract with Vietnam-era assets so roadblocks match the SOGPF theatre.
+- **Whys & questions:** Era-specific asset swap only; logic is identical to the vanilla helpers. The stray 4th argument to `rotatePosition` is harmless but suggests copy-paste from a version that took a per-object dir.
+- **Unresolved issues:** Same dead-code/duplication. Hard dependency on SOGPF classnames — will error if the composition is ever run without the mod (mitigated in the live path because SOGPF Iso templates are only listed in SOGPF configs). Extra ignored arg to `rotatePosition` (style/robustness noise).
+- **Reforger port notes:** Only relevant if a Vietnam theatre is targeted in Reforger; otherwise drop. Otherwise same prefab treatment as the vanilla variants with era-appropriate assets.
 
-### a3e_fnc_Roadblock_vn2  —  `Code/functions/Templates/fn_Roadblock_vn2.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_Roadblock_vn2  —  `Code/functions/Templates/fn_Roadblock_vn2.sqf`  ·  _status: documented_
+- **Purpose:** SOG Prairie Fire (Vietnam) variant — "FOB Tower" checkpoint using SOGPF trench/tower assets. Sibling of vn1, different tower/trench composition.
+- **Inputs:** Same `[_center,_rotation,_static,_vehicle]` params/contract. Depends on SOGPF `Land_vn_b_*` classes.
+- **Outputs:** Returns `_objects`. Side effects: terrain clear r=25; createVehicles vn props; repositions passed `_static` (into the tower, elevated ~4.33 m, `setVectorUp`) and `_vehicle`. No unit spawning, markers, remoteExec, cleanup.
+- **Calls:** `a3e_fnc_cleanupTerrain`, `A3E_fnc_RotatePosition` via `_fnc_createObject`.
+- **Called by:** **No direct callers** (registered `a3e_fnc_Roadblock_VN2`; unreferenced; live SOGPF path uses Iso `templates\rb_vn_rb2.sqf`). Source composition, not the dispatch target.
+- **Processing:** Differences: props are `Land_BarGate_F` + `Land_vn_b_trench_revetment_90_01` + `Land_vn_b_tower_01` (tall FOB tower hosting the static) + 2× `Land_vn_b_trench_revetment_05_01`. Fewer objects than vn1; static sits high in the tower. Same stray ignored 4th arg on the static/vehicle `rotatePosition` calls as vn1.
+- **Theory of operation:** Same contract; a taller/trench-based Vietnam checkpoint silhouette.
+- **Whys & questions:** Two vn variants exist to vary SOGPF checkpoint appearance, mirroring the multiple vanilla styles.
+- **Unresolved issues:** Same dead-code/duplication, SOGPF-classname hard dependency, and ignored `rotatePosition` arg as vn1.
+- **Reforger port notes:** Same as vn1 — Vietnam-theatre-only; port as a prefab if that theatre is in scope, else drop.
 
-### a3e_fnc_isoTemplateRestore  —  `Code/functions/Templates/fn_isoTemplateRestore.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_isoTemplateRestore  —  `Code/functions/Templates/fn_isoTemplateRestore.sqf`  ·  _status: documented_
+- **Purpose:** Runtime reconstruction half of the Iso system: given a stored template name plus a world center and rotation, it recreates the template's object composition in the world (rotated/translated into place), clears terrain in the template's clearance footprint, and returns metadata (parked-vehicle / static / ammo-box spawn slots) for the caller to populate with live units.
+- **Inputs:** `params["_center","_rotation",["_templateName",""]]` — `_center` = world position, `_rotation` = extra yaw applied to the whole composition, `_templateName` = which entry in `A3E_Templates` to build. Reads global `A3E_Templates` (populated by `a3e_fnc_LoadTemplates`).
+- **Outputs:** Side effects — `createVehicle`s every "spawn=true" object at its rotated relative position (sets dir, applies per-object attributes: terminal coloring, indestructible/allowDamage, "yeet" upward velocity, inflame, and an `init` code string compiled onto the object); hides terrain objects inside the clearance area via `hideObject` remoteExec'd to all. **Returns** a `HashMap` with keys `parkedvehicles`, `statics`, `ammoboxes` — each an array of `[type,realPos,dir,init]` slot records for objects flagged `spawn=false`. Exits early (returning nil) if the template name isn't found or has no objects.
+- **Calls:** `BIS_fnc_getFromPairs` (to read `Name`/`Clearance`/`Objects` from the pair-list); `A3E_fnc_rotatePosition` (rotate each object's relative offset around center); engine `createVehicle`, `nearestTerrainObjects`, `inArea`, `hideObject` (remoteExec), `BIS_fnc_DataTerminalColor`, `createHashMap`/`createHashMapFromArray`, `call compile` (per-object `init`), `setVelocity`, `inflame`. Internally defines two closures `_createObject` and `_spawn` (recursive — `_spawn` calls itself for child objects).
+- **Called by:** `Server/fn_RoadBlocks.sqf:46` — `private _templatePositions = [_pos,_dir, selectRandom _templatesAvailable] call a3e_fnc_IsoTemplateRestore;`. Single live caller. `fn_RoadBlocks` then reads `parkedvehicles`/`statics` from the returned HashMap and spawns manned vehicles (`BIS_fnc_spawnVehicle`) and static gunners (`A3E_fnc_AddStaticGunner`) into those slots. See _xref.md `## Templates`.
+- **Processing:** (1) `findIf` the template in `A3E_Templates` by `Name`; exit if not found. (2) Read `Clearance = [a,b,angle,isRectangle,c]`; if present, gather `nearestTerrainObjects` within `max(a,b)` and `hideObject` any that fall inside the rotated clearance area (`_rotation` added to the clearance angle). (3) Read `Objects`; exit if empty. (4) Create empty `_return` HashMap. (5) `forEach` top-level object → local `_spawn`: rotate the relative pos with `A3E_fnc_rotatePosition`, and if the object's attributes say `spawn` (default true) → `_createObject` it and recurse into `_childObjects` (children positioned relative to their parent's ATL pos); otherwise (spawn=false) classify it as `parkedvehicle`/`static`/`ammobox` and push a `[type,realPos,dir,init]` record into the corresponding `_return` array. (6) Return `_return`.
+- **Theory of operation:** The template file stores a whole fortification as relative-to-center offsets plus per-object attribute pair-lists. Restore replays that: static scenery (bunkers, HBarriers, razorwire) is created directly; "live" slots (vehicles that need crews, static weapons that need gunners, ammo boxes) are *not* created here — they're returned as data so the gameplay caller (RoadBlocks) can spawn faction-appropriate manned units. This cleanly separates "build the props" from "man the position." `A3E_fnc_rotatePosition` makes the whole composition orientable to face down a road.
+- **Whys & questions:** The child-object recursion positions children relative to the *parent object's* ATL position (not the center) — correct for e.g. a static gun mounted on a bunker. Attributes are a mini-DSL (`terminal`, `indestructable`, `yeet`, `inflame`, `init`, `spawn`, `parkedvehicle`+`parkedvehicletype`, `static`+`statictype`, `ammobox`+`ammotype`) resolved via `getOrDefault`. Why `_dir` is applied as `setDir (_dir+_rotation)` for created objects but stored raw for slot records: the caller (RoadBlocks) re-applies `_dir` itself but does NOT add `_rotation` (line 68/72), so **manned vehicles/statics may be misaligned when `_rotation` ≠ 0** vs the static scenery — a real inconsistency worth flagging.
+- **Unresolved issues:** BUG candidate — slot `dir` returned raw (no `_rotation` added) while created objects get `_dir+_rotation`; `fn_RoadBlocks` uses the raw slot dir, so parked vehicles / static gunners can face the wrong way relative to the rotated composition. RD — `"indestructable"` misspelling is load-bearing (must match the template data exactly); `_type`/`_init` are shadowed inside the `spawn=false` branch (redeclared `private _type`). The `init` string is `call compile`d with no sandboxing (acceptable for trusted mission data, but RD-006 dynamic-dispatch territory). Casing noise (`IsoTemplateRestore` vs `isoTemplateRestore`, RD-008).
+- **Reforger port notes:** In Enfusion this is `SpawnPrefab`/composition instantiation with a world transform (center + yaw), which handles rotation/translation natively — no manual `rotatePosition`. The "spawn=false slot" pattern maps to marker/slot entities inside a composition prefab that a game-mode component queries to spawn AI crews and gunners. Terrain clearance = the engine's roadway/terrain-object hiding or a clearance volume component. The attribute DSL becomes typed prefab parameters.
 
-### a3e_fnc_isoTemplateStore  —  `Code/functions/Templates/fn_isoTemplateStore.sqf`  ·  _status: stub_
-- **Purpose:** _(to document)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### a3e_fnc_isoTemplateStore  —  `Code/functions/Templates/fn_isoTemplateStore.sqf`  ·  _status: documented_
+- **Purpose:** Offline authoring/export tool (the "capture" half of the Iso system): run in the editor to serialize a hand-built object composition inside a named trigger area into the pair-list data structure that `Code/templates/<name>.sqf` files use. Outputs to the clipboard so a designer can paste it into a new template file.
+- **Inputs:** `params["_exportName"]` — the trigger's `triggerText` name identifying which composition to export. Reads the world: `allMissionObjects "EmptyDetector"` (to find the area trigger) and `allMissionObjects ""` (all objects) filtered by `inAreaArray`. Reads each object's `A3E_IsoAttributes` variable (the per-object attribute pair-list a designer set in the editor).
+- **Outputs:** Side effects — `copyToClipboard` the serialized template string, and `setVariable ["A3E_Templates",[_result]]` (so it can be immediately restore-tested in the same editor session). `systemChat` warnings for skipped/childless cases. Exits early (logging via `A3E_fnc_Log`) if no trigger with the given name exists.
+- **Calls:** `A3E_fnc_Log`; engine `allMissionObjects`, `triggerText`, `triggerArea`, `getPosATL`, `inAreaArray`, `vectorDiff`, `getDir`, `typeOf`, `isKindOf`, `createHashMap`, `copyToClipboard`. Defines local closures `_getAttributes` (build a lowercased attribute HashMap from `A3E_IsoAttributes`) and `_hasAttribute`.
+- **Called by:** No runtime callers — this is an editor/dev utility invoked manually (registered in `functions.hpp` as `class isoTemplateStore {}`). _xref.md lists only self-references (lines within the file). Not called from `fn_initServer` or any gameplay path.
+- **Processing:** (1) Find the `EmptyDetector` trigger whose `triggerText == _exportName`; exit if none. (2) Gather all objects in that trigger's area; compute `_center` (trigger ATL pos, z=0) and `_clearanceZone = triggerArea`. (3) Build `_objectAttributes`: for each object, a lowercased-key attribute HashMap plus `sourceobj`=the object. (4) Loop while objects remain: skip children (`hasbase`) by rotating them to the back of the queue; skip the trigger itself (`EmptyDetector`); for a base/plain object, find its children (those whose `hasbase` matches this object's `isbase`), emit each child as `[typeOf, posRelToParent, dir, attrs]`, and emit the object itself as `[typeOf, posRelToCenter, dir, attrs, childObjects]` into `_export`; delete processed entries; a guard `break`s if only orphan-child objects remain. (5) Assemble `_result = [["Name",_exportName],["Clearance",_clearanceZone],["Objects",_export]]`, copy to clipboard, and stash into `A3E_Templates`.
+- **Theory of operation:** This is the inverse of `IsoTemplateRestore`. A designer places props in the editor, tags each with an `A3E_IsoAttributes` pair-list (e.g. `spawn=false`, `static=true`, `parkedvehicle=true`, `isbase`/`hasbase` to group a gun onto a bunker), wraps them in a named trigger (whose area becomes the clearance footprint), runs this exporter, and pastes the clipboard result into a new `rb_*.sqf`. The `isbase`/`hasbase` linkage is what produces the nested `childObjects` that Restore rebuilds relative to a parent. Positions are stored relative to the trigger center so the composition is placeable anywhere.
+- **Whys & questions:** The child-requeue loop (`pushBack (deleteAt 0)`) reorders the work list so parents are processed before their children get consumed — a hand-rolled dependency sort. The final guard `if(count _objectAttributes == {"hasbase" in _x} count _objectAttributes)` detects "only orphaned children left" (a child whose base wasn't in the area) and bails with a warning. `_key`/`_value` inside `_getAttributes` are appended to but `_key` is never declared/used meaningfully (leftover), `_value` is commented out — dead scaffolding.
+- **Unresolved issues:** BUG candidate — line 82's guard `if(count ... == ... count ...) then { ... break; }` is missing a trailing `;` after the `then {}` block (line 86→88); harmless only because it's the last statement of the `while`. RD — dev tool with `systemChat`/`copyToClipboard` side effects shipped in the mission PBO (harmless but dead weight at runtime; could be excluded from release builds). `_hasAttribute` closure is defined but never called. No handling for objects with neither `isbase` nor `hasbase` beyond treating them as standalone (fine). Casing noise (RD-008).
+- **Reforger port notes:** Largely obsolete in Enfusion — the World Editor already saves compositions/prefabs as `.et` layout resources, so this manual serialize-to-clipboard workflow is replaced by native "Save as prefab/composition." If any authoring tooling is needed, it would be an editor plugin exporting a composition to the port's template/config format, preserving the slot attributes (spawn=false markers, base/child hierarchy) as prefab metadata.
 
 ## Revision History
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton (10-field entry stubs, no analysis) |
+| 2026-07-02 | Claude | Documented all 45 entries (by family: BuildPrison + AmmoDepot/ComCenter/MotorPool/MortarSite/Roadblock/Misc) |

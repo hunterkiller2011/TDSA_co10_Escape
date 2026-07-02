@@ -23,7 +23,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | 4 | Spawning, SearchLeader, Statistics | 36 | **done** |
 | 5 | Server, _init-and-includes | 38 | **done** |
 | 6 | DRN | 20 | **done** |
-| 7 | Templates (dedupe variants) | 45 | **in-progress** (by family) |
+| 7 | Templates (dedupe variants) | 45 | **done** |
 
 ## Per-category status
 
@@ -44,7 +44,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | Server | [Server.md](Server.md) | 30 | done |
 | _init & includes | [_init-and-includes.md](_init-and-includes.md) | 8 | done |
 | DRN | [DRN.md](DRN.md) | 20 | done |
-| Templates | [Templates.md](Templates.md) | 45 | in-progress (families: BuildPrison…) |
+| Templates | [Templates.md](Templates.md) | 45 | done |
 
 ## Concern intake (consolidated into trackers centrally)
 
@@ -123,7 +123,7 @@ _Raw agent notes (DRN = legacy third-party ambient-AI library; much is supersede
 - RD/tech-debt (whole library): hard external dependency on legacy DRN CommonLib (`drn_fnc_CL_*` + `a3e_var_commonLibInitialized` nag-loops) across ~10 functions; pervasive unused `private` declarations; magic-index soldier-record schemas that DIFFER between `PopulateVillage` and `PopulateLocation` (data-format drift); `A3E_*`/`a3e_*`/`drn_*` casing/namespace straddle (RD-008), esp. `InitVillageMarkers` registered/called under both `drn` and `A3E_fnc_`.
 - Q (`AmbientInfantry`): hardcoded 6:5 Ind:Opfor faction weighting (line 46) carries the author's own `//WHY!?!?!?!?!` comment — intent unknown; `_minUnitsInGroup`/`_maxUnitsInGroup` params are dead (squad size from `getDynamicSquadSize`).
 
-**Sprint 7 intake (Templates)** — accumulating per family; folded into trackers at Sprint 7 end.
+**Sprint 7 intake (Templates)** — folded into `bugs-app.md` BUG-028…029, `risks-tech-debt.md` RD-026…029, `open-questions.md` Q-021. Documented by family (BuildPrison + AmmoDepot/ComCenter/MotorPool/MortarSite/Roadblock/Misc) via per-family part-files, merged into `Templates.md`. Key reconciliation: the `fn_Roadblock*` compositions are **dead** — live roadblocks use the Iso data-template system (`LoadTemplates`→`IsoTemplateRestore`→`RoadBlocks`); `MortarSite2` is a byte-identical copy of `MortarSite`. Raw BuildPrison notes below:
 
 _BuildPrison family (6):_
 - **BUG-candidate (potential mission-breaker):** prisons that use a whole *building* as the gate object
@@ -150,5 +150,6 @@ _BuildPrison family (6):_
 | 2026-07-02 | Claude | Sprint 5 (Server/_init, 38) documented; findings folded; security-privacy hardening added |
 | 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; corrected DRN live/dead (if(false) block); findings folded |
 | 2026-07-02 | Claude | Sprint 7 in progress by family — BuildPrison (6/45) documented; findings stashed |
+| 2026-07-02 | Claude | Sprint 7 complete — Templates 45/45 (by family, merged); **all 246 entries documented**; findings folded |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |
 | 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; concerns listed for tracker intake |

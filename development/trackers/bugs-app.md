@@ -122,6 +122,14 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** low-medium · **candidate — verify**
 - **Repro / context:** In DRN functions that are still live (the search/insertion path): `fn_SearchGroup.sqf` uses `grpNull` as the default for a **marker-name** parameter (type mismatch); `fn_MotorizedSearchGroup.sqf` issues a duplicate `addWaypoint`; `fn_InsertionTruck.sqf` does an unconditional `player sideChat` (null on dedicated servers; UI/log spam). The aquatic/ambient DRN bug candidates are moot — those functions are dead (see RD-025).
 
+## BUG-028 — Building-as-gate prisons may never register escape
+- **Status:** open · **Severity:** high (potential mission-breaker) · **candidate — verify in-game/config**
+- **Repro / context:** `Server/fn_initServer.sqf:647-649` detects prison escape by polling `A3E_PrisonGateObject animationPhase "Door_1_rot"/"Door_2_rot" > 0.5`. But `BuildPrison2` (`Land_Shed_05_F`), `BuildPrison4` (`Land_Slum_House03_F`), and `BuildPrison5` (`Land_Slum_House02_F`) store a whole *building* as `A3E_PrisonGateObject`. If those base-game classes don't expose exactly those animation sources, the escape condition never fires for those layouts (prison effectively unbeatable). Verify the door animation-source names per class.
+
+## BUG-029 — Iso roadblock manned slots misaligned under rotation (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Templates/fn_isoTemplateRestore.sqf` applies `setDir (_dir + _rotation)` to created scenery but stores manned-slot `dir` **raw**; `Server/fn_RoadBlocks.sqf:68-72` then re-applies the raw `_dir` without adding `_rotation`, so spawned manned vehicles / static gunners are misaligned vs the rotated static composition whenever `_rotation ≠ 0`. Live roadblock path.
+
 ---
 
 _Format for new entries:_
@@ -144,3 +152,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added BUG-019…023 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
 | 2026-07-02 | Claude | Added BUG-024…026 from code-reference Sprint 5 (Server) |
 | 2026-07-02 | Claude | Added BUG-027 from code-reference Sprint 6 (DRN) |
+| 2026-07-02 | Claude | Added BUG-028…029 from code-reference Sprint 7 (Templates) |

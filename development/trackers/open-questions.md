@@ -114,6 +114,13 @@ Parameters exist both as lobby params (`params.hpp`) and CBA settings (`XEH_preI
 reads the other's globals? And `initServer` does `waitUntil {scriptDone _scriptHandle}` on the search-chopper
 `execVM` (`:452`), serializing init behind chopper creation — intentional? _(Surfaced Sprint 5.)_
 
+## Q-021 — ComCenter objective visual-cue inconsistency
+**Status:** open
+Vanilla/VN com-center variants call `BIS_fnc_DataTerminalColor` (green glow) on the hackable terminal, but the
+SPE/SPE-GER radio variants (`SPE_Radio_Us`/`SPE_Radio_Ger`) do not — SPE players lose the visual highlight (the
+`A3E_isTerminal` hack still works). Also `_spe_ger1`/`_vn_us*` force-texture their German/US flags to the generic
+Opfor texture. Intended, or cosmetic oversight? _(Surfaced Sprint 7.)_
+
 ---
 
 _Format for new entries:_
@@ -133,3 +140,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added Q-013, Q-014 from code-reference Sprint 3 (AI) |
 | 2026-07-01 | Claude | Added Q-015…017 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
 | 2026-07-02 | Claude | Added Q-018…020 from code-reference Sprint 5 (Server/init) |
+| 2026-07-02 | Claude | Added Q-021 from code-reference Sprint 7 (Templates) |
