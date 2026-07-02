@@ -45,6 +45,7 @@ asked to build/port code, work in the production tree — do not turn these plan
 - [trackers/decision-log.md](trackers/decision-log.md) — `ADR-NNNN` (empty — no decisions yet)
 - [trackers/open-questions.md](trackers/open-questions.md) — `Q-NNN` (seeded with conversion unknowns)
 - [trackers/risks-tech-debt.md](trackers/risks-tech-debt.md) — `RD-NNN` (seeded)
+- [trackers/test-scenarios.md](trackers/test-scenarios.md) — `TS-NNN` (playtest scenarios that confirm/deny findings)
 
 ### code-reference/ — legacy Arma 3 source map
 - [code-reference/README.md](code-reference/README.md) — reverse-engineering reference of the existing

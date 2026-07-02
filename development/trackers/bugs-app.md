@@ -3,6 +3,11 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 
 > Bugs in the mission/application code. **ID scheme:** `BUG-NNN` (stable, never reused). Bugs in the
 > test scripts/infra go in [bugs-tests.md](bugs-tests.md) instead.
+>
+> **Reality-check:** co10_Escape is in active use (thousands of playtested sessions). Any finding that implies the
+> mission cannot be played is almost certainly a static-analysis error — severities here are **provisional** until
+> confirmed by a scenario in [test-scenarios.md](test-scenarios.md). Prefer downgrading + a test scenario over
+> asserting a mission-breaker. Most entries below are from static review and still need in-game confirmation.
 
 > Surfaced during code-reference Sprint 1 (foundational categories). "Confirmed" = verified against
 > source by hand; "candidate" = reported by analysis, not yet independently reproduced.
@@ -122,9 +127,10 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** low-medium · **candidate — verify**
 - **Repro / context:** In DRN functions that are still live (the search/insertion path): `fn_SearchGroup.sqf` uses `grpNull` as the default for a **marker-name** parameter (type mismatch); `fn_MotorizedSearchGroup.sqf` issues a duplicate `addWaypoint`; `fn_InsertionTruck.sqf` does an unconditional `player sideChat` (null on dedicated servers; UI/log spam). The aquatic/ambient DRN bug candidates are moot — those functions are dead (see RD-025).
 
-## BUG-028 — Building-as-gate prisons may never register escape
-- **Status:** open · **Severity:** high (potential mission-breaker) · **candidate — verify in-game/config**
-- **Repro / context:** `Server/fn_initServer.sqf:647-649` detects prison escape by polling `A3E_PrisonGateObject animationPhase "Door_1_rot"/"Door_2_rot" > 0.5`. But `BuildPrison2` (`Land_Shed_05_F`), `BuildPrison4` (`Land_Slum_House03_F`), and `BuildPrison5` (`Land_Slum_House02_F`) store a whole *building* as `A3E_PrisonGateObject`. If those base-game classes don't expose exactly those animation sources, the escape condition never fires for those layouts (prison effectively unbeatable). Verify the door animation-source names per class.
+## BUG-028 — Building-as-gate prisons: escape-detection path unclear (likely FALSE POSITIVE)
+- **Status:** open · **Severity:** low · **likely false positive — escape fires reliably in thousands of live sessions; see [TS-001](test-scenarios.md)**
+- **Repro / context:** `Server/fn_initServer.sqf:647-649` detects prison escape by polling `A3E_PrisonGateObject animationPhase "Door_1_rot"/"Door_2_rot" > 0.5`; `BuildPrison2` (`Land_Shed_05_F`), `BuildPrison4` (`Land_Slum_House03_F`), `BuildPrison5` (`Land_Slum_House02_F`) store a whole *building* as `A3E_PrisonGateObject`.
+- **Reality check:** escape works across all prisons in normal play, so the original "mission-breaker" analysis — which assumed that poll is the **only** escape-detection path — is almost certainly incomplete (either those classes DO expose those animation sources, or other detection paths exist that weren't traced). **Action:** run TS-001 and trace the full escape-detection logic; do not treat as a real bug unless a scenario fails.
 
 ## BUG-029 — Iso roadblock manned slots misaligned under rotation (candidate)
 - **Status:** open · **Severity:** medium · **candidate — verify**
@@ -153,3 +159,4 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added BUG-024…026 from code-reference Sprint 5 (Server) |
 | 2026-07-02 | Claude | Added BUG-027 from code-reference Sprint 6 (DRN) |
 | 2026-07-02 | Claude | Added BUG-028…029 from code-reference Sprint 7 (Templates) |
+| 2026-07-02 | Claude | Added reality-check note; reframed BUG-028 as likely false positive (→ TS-001) |
