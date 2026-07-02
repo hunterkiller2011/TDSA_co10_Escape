@@ -81,9 +81,33 @@ Each entry uses these fields:
 | [DRN.md](DRN.md) | `Code/functions/DRN/` | 20 (legacy) |
 | [ace.md](ace.md) | `Code/functions/ace/` | 4 |
 | [_init-and-includes.md](_init-and-includes.md) | entry points & includes | 8 |
+| [Scripts-Escape.md](Scripts-Escape.md) | `Code/Scripts/Escape/` (legacy) | 11 |
+| [Scripts-Support.md](Scripts-Support.md) | `Code/Scripts/{DRN,AT,outlw_magRepack}/` | 7 |
+| [Templates-Iso.md](Templates-Iso.md) | `Code/templates/` (Iso data) | 11 |
+
+## Coverage & gaps
+
+The code-reference documents **`Code/functions/**`** (238 functions, 15 category docs) **+ the entry/config files**
+(`_init-and-includes.md`: `description.ext`, `XEH_preInit.sqf`, `fn_bootstrapEscape`, `fn_initServer`,
+`include/{functions,params,defines}.hpp`, `config.sqf`). Other repo code is **not yet covered** — listed here so the
+gap is explicit:
+
+| Area | Files | Status | Notes |
+|------|-------|--------|-------|
+| `Code/Scripts/` | 18 | **documented** → [Scripts-Escape.md](Scripts-Escape.md) (11) + [Scripts-Support.md](Scripts-Support.md) (7) | Live legacy helpers + the `EscapeSurprises` reinforcement system + DRN CommonLib + AT drone hack + third-party magRepack. Findings: BUG-032/033, RD-031…033, Q-023. |
+| `Code/templates/` | 11 | **documented** → [Templates-Iso.md](Templates-Iso.md) | Live Iso roadblock data-templates — all 11 referenced by per-mod `A3E_RoadblockTemplates` (none orphaned; `rb_bis_rb4` is used by CSLA/SFP, just not the vanilla default). Findings: RD-034. |
+| `Code/cba_settings.sqf` + CBA usage | 1 | **evaluate (Q-022)** | Default CBA settings + the mission's CBA touchpoints. Evaluate what must be brought under the mission's control for Reforger (no CBA there). |
+| `Code/Revive/` | 45 | **TODO (owner): vendor in** | ATR revive + HSC — currently a git submodule; to be brought into this repo so it's part of the conversion. |
+| `Islands/` | ~476 | data — **evaluated** | Per-world config: `WorldConfig.sqf` sets counts/distances (`A3E_ComCenterCount`, `A3E_AmmoDepotCount`, `A3E_MinComCenterDistance`, `A3E_WorldName`); `*Markers.sqf` are `[[x,y,z], dir]` spawn-location lists (com centers, villages, patrol boats). Data — no per-file docs planned. |
+| `Mods/` | ~89 | data — **evaluated** | Per-mod `UnitClasses.sqf`: side/flag setup, unit/vehicle/weapon spawn pools (probability-weighted classname "random arrays"), and the `A3E_*Templates` selection arrays (RD-028). |
+| `Factions/` | 1 | **dead/unfinished system** (RD-030) | Not just data — an *unwired* faction-abstraction: `loadFaction`/`selectFaction`/`getRndEntryFromFaction` have no callers and the `A3E_*Factions` pools are never populated (only `BIS_Syndikat.sqf` authored). Live unit system is `Mods/UnitClasses`. Resolves Q-018. |
+| root `compile.py`, `pack_addons.py` | 2 | out of scope | Deprecated build scripts (noted in CLAUDE.md). |
+
+**Plan:** document `Code/Scripts/` (own effort, split up) and `Code/templates/` next; **vendor `Code/Revive/` into the repo** (owner TODO); **evaluate CBA** internalization (Q-022). `Islands/`/`Mods/`/`Factions/` are data (schema above) — no per-file docs planned.
 
 ## Revision History
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton; per-category docs + entry stubs (no analysis) |
+| 2026-07-02 | Claude | Added SQF reviewer caveats; added Coverage & gaps (Scripts/templates/data not yet covered) |

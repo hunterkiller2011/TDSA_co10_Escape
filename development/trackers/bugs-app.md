@@ -156,6 +156,37 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
   add a keep-out radius to the patrol waypoint selection in `A3E_fnc_Patrol`/the marker), and/or suppress the
   weapon-pickup escape trigger while a guard is inside the prison. Test with TS-006. _(User-reported; code-confirmed.)_
 
+## BUG-031 — Spawn/init race can start the escape prematurely (candidate)
+- **Status:** open · **Severity:** medium · **candidate — matches user report of intermittent instant-fail on spawn**
+- **Repro / context:** The escape check (`fn_initServer.sqf:611-623`) starts the escape if an *initialized* player has
+  `count weapons > 0` (`:617-618`). A joining player first spawns at the respawn point (map corner) **with their
+  default loadout**, then the client strips gear (`fn_initLocalPlayer.sqf:23-33`). In parallel the server
+  (`fn_initPlayer.sqf`) waits only on **global** flags (`:20` — the comment claims "no weapons etc" but it does not
+  check the player's actual weapons), places the player, sleeps 0.5 s (`:57`), then sets
+  `A3E_PlayerInitializedServer=true` (`:61`). If the client's weapon-removal hasn't replicated to the server before
+  that flag flips, the escape check sees a weapon and **starts the escape for the whole squad** — which, combined
+  with BUG-030 (guard already in the prison), reads as an instant failure. Intermittent, matching the report.
+- **Fix direction:** gate `A3E_PlayerInitializedServer` (or the escape check) on the player actually being unarmed
+  at the prison — e.g. `waitUntil {count weapons _player == 0 && (_player distance A3E_StartPos) < 15}` before
+  setting the flag; or don't honour the weapon trigger until the player is confirmed stripped. Test with TS-007.
+- **Related UX:** the 'corner spawn visible before the screen goes black' — the intro/black-screen
+  (`fn_initLocalPlayer.sqf:88+`, gated on `A3E_PlayerInitializedServer`) does not cover the initial
+  spawn + gear-strip + teleport.
+
+## BUG-032 — `Functions.sqf` `_PopulateVehicle` soldier counter never increments
+- **Status:** open · **Severity:** medium · **confirmed**
+- **Repro / context:** `Code/Scripts/Escape/Functions.sqf` — all four seat-fill loops (`:520,539,558,577`) contain
+  `_soldierCount + _soldierCount + 1;` (a discarded expression) instead of `_soldierCount = _soldierCount + 1;`.
+  `_soldierCount` starts at 0 (`:507`) and gates the `while` loops (`:511,530,549,568`) but is **never incremented**,
+  so the `_soldierCount <= _maxSoldiersCount` cap doesn't limit crew — the loops only stop on the seat-full
+  (`_continue`) fallthrough. Live code (reinforcement / populate-vehicle path used by `EscapeSurprises`).
+
+## BUG-033 — `EscapeSurprises` motorized-search re-fires immediately at max difficulty (candidate)
+- **Status:** open · **Severity:** low-medium · **candidate — verify**
+- **Repro / context:** `Code/Scripts/Escape/EscapeSurprises.sqf:137` — the MOTORIZEDSEARCHGROUP in-loop re-schedule
+  uses `time + _timeInSek * (4 - _enemyFrequency)`, unlike every other branch's `time + _timeInSek * (0.5 + (4-freq)/4)`.
+  At `_enemyFrequency == 4` (max) this is `time + 0` → the surprise re-fires immediately (spam).
+
 ---
 
 _Format for new entries:_
@@ -181,3 +212,5 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added BUG-028…029 from code-reference Sprint 7 (Templates) |
 | 2026-07-02 | Claude | Added reality-check note; reframed BUG-028 as likely false positive (→ TS-001) |
 | 2026-07-02 | Claude | Traced prison escape (3 triggers) → BUG-028 RESOLVED (false positive); added BUG-030 (guards patrol into prison) |
+| 2026-07-02 | Claude | Added BUG-031 (spawn/init race can start escape via the weapon trigger) |
+| 2026-07-02 | Claude | Added BUG-032 (Functions.sqf no-op counter, confirmed), BUG-033 (EscapeSurprises re-fire) from Scripts review |

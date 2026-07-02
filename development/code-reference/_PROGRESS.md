@@ -151,5 +151,6 @@ _BuildPrison family (6):_
 | 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; corrected DRN live/dead (if(false) block); findings folded |
 | 2026-07-02 | Claude | Sprint 7 in progress by family — BuildPrison (6/45) documented; findings stashed |
 | 2026-07-02 | Claude | Sprint 7 complete — Templates 45/45 (by family, merged); **all 246 entries documented**; findings folded |
+| 2026-07-02 | Claude | Extra coverage: `Code/Scripts/` (18 → Scripts-Escape + Scripts-Support) and `Code/templates/` (11 → Templates-Iso) documented; findings folded (BUG-032/033, RD-031…034, Q-023) |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |
 | 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; concerns listed for tracker intake |

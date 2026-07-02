@@ -92,6 +92,103 @@ whether a force-template flag should be added). Otherwise replay until the targe
 
 ---
 
+## TS-007 — Spawn sequence must not start the escape
+- **Confirms/denies:** BUG-031 (spawn/init race prematurely starts the escape via the weapon trigger).
+- **Config:** MP with 2+ players; deliberately join late / on a loaded or laggy server; also watch normal fresh starts.
+- **Milestones:** on each (re)spawn, confirm the black screen covers the corner-spawn + gear-strip + teleport;
+  confirm `A3E_EscapeHasStarted` does NOT become true as a side effect of a player joining/spawning (only from the
+  three intended triggers: weapon pickup / 15–100 m from start / gate open).
+- **Expected:** escape never starts from spawning. Premature escape right after a join/spawn confirms BUG-031.
+- **Status:** planned (user reports intermittent instant-fail after spawn).
+
+---
+
+## TS-008 — Zone garrison serialize / deserialize
+- **Confirms/denies:** BUG-005 (crew index -1), BUG-006 (cargo index), BUG-007 (trigger leak), BUG-015 (empty `SeekShelter`).
+- **Config:** any world; approach a location/village zone whose garrison includes a **crewed vehicle**.
+- **Setup:** use **DH-2** (force zone deactivate→reactivate) if available; otherwise leave the zone (~800 m+) to
+  deactivate, then return to reactivate.
+- **Milestones:** (1) note the garrison (crew in vehicle seats, units in buildings); (2) deactivate; (3) reactivate —
+  are crew back in the **same seats** (BUG-005/006)? any **leftover/duplicate triggers** (BUG-007, use DH-7)? any
+  groups left **idle with no orders** (BUG-015)?
+- **Expected:** units restored to prior seats/positions; no trigger leak; no idle groups.
+- **RNG:** needs a zone with a crewed vehicle; DH-2 makes it repeatable.
+
+## TS-009 — Zone population: large villages & location garrisons
+- **Confirms/denies:** BUG-020 (large-village Opfor branch + stray `systemchat`), BUG-021 (location buildings not garrisoned).
+- **Config:** a world with a large town (village area > 5000); NATO v CSAT, no mods.
+- **Milestones:** (1) enter a **large** village — does it get the extra Opfor the `>5000` branch should add (BUG-020)?
+  (2) watch chat for stray **numeric `systemchat` spam** when villages populate (BUG-020 debug line, visible to all);
+  (3) at a location zone (com center / ammo / etc.), are the **surrounding buildings garrisoned** with units (BUG-021)?
+- **Expected:** large villages get Opfor; no stray systemchat; location buildings garrisoned.
+- **RNG:** which villages are large is per-world; DH-3 helps see zone bounds.
+
+## TS-010 — Boat extraction behavior
+- **Confirms/denies:** BUG-016 (boat runner spawns the *car* behavior; `fn_ExtractionBoat` orphaned).
+- **Config:** a coastal/island world; **force extraction type = boat (DH-1)** or replay until a water extraction is offered.
+- **Milestones:** reach the extraction; observe whether the extraction **boats** path on water sensibly, pick up players,
+  and leave — or behave like land vehicles (stuck at shore, odd pathing).
+- **Expected:** boats function as an extraction. Car-on-water behavior / stuck boats confirm the runner mismatch.
+- **RNG:** extraction type is random and terrain-dependent — DH-1 is the practical enabler.
+
+## TS-011 — ACE interactions: hijack, heal, captive
+- **Confirms/denies:** BUG-012 (hijack ignores ACE-unconscious), BUG-013 (heal-at-building bypasses ACE Medical), BUG-008 (`CaptiveHandle` busy-spin).
+- **Config:** **with ACE**; NATO v CSAT.
+- **Milestones:** (a) start hacking a terminal/enemy vehicle, then go **ACE-unconscious** mid-hack — does the hack keep
+  progressing (BUG-012)? (b) take an ACE wound, use the **heal-at-building** action — are wounds cleared consistently /
+  is there any cooldown (BUG-013)? (c) while a captured player is ACE-unconscious, watch server FPS for a spin (BUG-008,
+  use DH-4).
+- **Expected:** hack pauses while unconscious; heal respects ACE medical; no FPS spin.
+- **RNG:** needs ACE + reaching a hackable object / heal building.
+
+## TS-012 — Search escalation & reinforcements
+- **Confirms/denies:** BUG-027 (DRN `InsertionTruck` stray `sideChat`; `MotorizedSearchGroup`/`SearchGroup` behavior), BUG-023 (`ReportToHQ` condition).
+- **Config:** any world; after escaping, get spotted and **hold contact** so the search leader escalates (or **DH-5** to force it).
+- **Milestones:** observe reinforcement/search assets — motorized search groups, the **search chopper**, an **insertion
+  truck**; watch chat for the stray `sideChat` when the insertion truck spawns (BUG-027); confirm search groups are
+  actually **dispatched to your last-known position** (BUG-023).
+- **Expected:** search assets dispatch correctly; no stray sidechat.
+- **RNG:** escalation timing needs sustained contact; DH-5 forces it.
+
+## TS-013 — Civilian strollers
+- **Confirms/denies:** BUG-017 (`Stroll` markerless path leaves `_destinationPos` unset).
+- **Config:** a world with populated towns; civilians enabled; run with `-showScriptErrors`.
+- **Milestones:** watch civilian strollers in town — do they wander normally, or do some spawn and stand still / raise a
+  script error?
+- **Expected:** strollers wander. Frozen strollers / script errors confirm the bug.
+- **RNG:** civilians spawn via `CivilianCommuters` (Chronos) — present in towns.
+
+---
+
+## Testing aids — debug hooks worth adding
+
+Many scenarios are gated by RNG (which template/variant spawns, extraction type, when a search escalates). The existing
+debug framework (`A3E_Debug`, `a3e_debug_overwrite`, `a3e_debug_artillery`, `DebugRoadblocks` in `Code/config.sqf`)
+already reveals some markers and can be extended:
+
+- **DH-1 — Force template / extraction selection:** debug override so `selectRandom`/`callRandomFunction` picks a pinned
+  entry for prisons (`fn_createStartpos`/`A3E_PrisonTemplates`), depots/com-centers/motor-pools/mortars (`fn_create*`),
+  roadblocks (`A3E_RoadblockTemplates`), and the extraction type (`fn_SelectExtractionZone`). → TS-001, TS-002, TS-010.
+- **DH-2 — Force zone deactivate→reactivate:** admin action to cycle the nearest `A3E_Zones` entry so serialize/deserialize
+  runs on demand. → TS-008 (no 800 m walk).
+- **DH-3 — Reveal hidden markers:** extend `A3E_Debug` to `setMarkerAlpha` all zone/patrol/depot/guard-area markers
+  (many are alpha-0). → zone bounds, the prison guard area (BUG-030), camp spacing.
+- **DH-4 — State readout (log/HUD):** `A3E_EscapeHasStarted`, `A3E_SoundPrisonAlarm`, max guard `knowsAbout`,
+  `count a3e_var_artillery_units`, active-trigger count, grouped-entity count. → TS-001/003/006/007/011 + leak checks.
+- **DH-5 — Force events:** admin triggers to force the prison alarm, an artillery fire mission, or a search escalation. → TS-003, TS-012.
+- **DH-6 — Spawn-race repro:** a debug delay before the client gear-strip (or a "spawn with gear" toggle) to reproduce
+  BUG-031 deterministically. → TS-007.
+- **DH-7 — Leak counters:** log active-trigger + grouped-entity counts over time. → BUG-007 (trigger leak), RD-026 (template objects never despawned).
+
+## Bugs better confirmed by inspection than by a scenario
+
+Code-confirmed and either dead or not observable in normal play — verify by reading the fix (a one-line `diag_log` at the
+site confirms most), not a playtest: **BUG-001** (cache perf), **BUG-002/003/010** (dead code), **BUG-004** (debug tooling),
+**BUG-009/011** (harmless with current callers), **BUG-022** (stats URL — inspect the server request), **BUG-024/026**
+(subtle / harmless-once), **BUG-025** (only on bad terrain — very low repro). BUG-028 is already **resolved** (false positive).
+
+---
+
 _Format for new entries:_
 ```
 ## TS-NNN — <short title>
@@ -109,3 +206,5 @@ _Format for new entries:_
 |------|--------|--------|
 | 2026-07-02 | Claude | Created; seeded TS-001…005 from Sprint-review findings |
 | 2026-07-02 | Claude | TS-001 updated (BUG-028 resolved via static trace); added TS-006 (guards enter prison) |
+| 2026-07-02 | Claude | Added TS-007 (spawn sequence must not start escape) |
+| 2026-07-02 | Claude | Added TS-008…013 (from tracked bugs), debug-hooks section (DH-1…7), and code-only bug list |

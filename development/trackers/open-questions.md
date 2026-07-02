@@ -97,11 +97,15 @@ dedicated server (no UI) this may never fire, silently no-op'ing the whole exter
 `A3E_var_PlayerCanBeDetected` is a single global latch shared by the OPFOR and Independent detection triggers,
 so only one side can report a sighting at a time. Intended, or should each side latch independently? _(Surfaced Sprint 4.)_
 
-## Q-018 — Faction functions: live via dynamic dispatch, or dead?
-**Status:** open
-`getRndEntryFromFaction`, `loadFaction`, `selectFaction` have no static `fnc_` callers in `_xref` — reached via
-dynamic `call compile` dispatch, or genuinely dead? Also `selectFaction`'s geographic/positional selection is an
-unimplemented TODO (always random). Confirm before porting the faction system. _(Surfaced Sprint 5.)_
+## Q-018 — Faction functions: live via dynamic dispatch, or dead? — RESOLVED (dead/unfinished)
+**Status:** resolved (2026-07-02) — **dead / unfinished**
+**Resolution:** the whole `Factions/` faction-abstraction is unwired. `loadFaction`/`selectFaction`/
+`getRndEntryFromFaction` have **zero callers** (not even string/dynamic-dispatch), and the side pools
+`selectFaction` reads (`A3E_EnemyFactions`/`A3E_IndepFactions`/`A3E_CivilianFactions`/`A3E_PlayerFaction`) are
+**never populated** anywhere in the repo — so `selectFaction` would error on a nil global if ever called. Only one
+faction file exists (`Factions/BIS_Syndikat.sqf`, an Independent faction), and `selectFaction` still carries a
+`//ToDo` for positional selection. It's an **abandoned/unfinished feature**; the live unit system is
+`Mods/{Mod}/UnitClasses.sqf` (the `a3e_arr_*` arrays + `A3E_*Templates`). Tracked as tech-debt in RD-030.
 
 ## Q-019 — Lobby params vs CBA settings precedence
 **Status:** open
@@ -121,7 +125,19 @@ SPE/SPE-GER radio variants (`SPE_Radio_Us`/`SPE_Radio_Ger`) do not — SPE playe
 `A3E_isTerminal` hack still works). Also `_spe_ger1`/`_vn_us*` force-texture their German/US flags to the generic
 Opfor texture. Intended, or cosmetic oversight? _(Surfaced Sprint 7.)_
 
----
+## Q-022 — CBA dependency: how deep, and what must be internalized for Reforger?
+**Status:** open
+The mission depends on **CBA** (Community Base Addons): settings via `XEH_preInit.sqf` + `cba_settings.sqf`
+(`CBA_fnc_addSetting`, `cba_settings_hasSettingsFile`), the `Extended_PreInit_EventHandlers` PreInit hook,
+`CBA_fnc_addEventHandler` (e.g. the ACE-unconscious handler), and possibly CBA calls inside `Code/Scripts/`.
+Reforger has no CBA. Evaluate every CBA touchpoint and decide which parts to **bring under the mission's direct
+control** vs replace with Enfusion equivalents. _(Surfaced from the coverage review; see code-reference Coverage & gaps.)_
+
+## Q-023 — magRepack third-party licensing / redistribution
+**Status:** open
+`Code/Scripts/outlw_magRepack/*` (Outlawled/GiPPO Mag Repack v3.1.3) is vendored into the mission with **no license
+stated in-file**. Confirm redistribution rights before shipping, and decide whether to keep/reimplement it for the
+Reforger port (it's pure Arma-3 dialog/magazine API). See RD-033. _(Scripts review.)_
 
 _Format for new entries:_
 ```
@@ -141,3 +157,6 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added Q-015…017 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
 | 2026-07-02 | Claude | Added Q-018…020 from code-reference Sprint 5 (Server/init) |
 | 2026-07-02 | Claude | Added Q-021 from code-reference Sprint 7 (Templates) |
+| 2026-07-02 | Claude | Added Q-022 (CBA dependency evaluation) from coverage review |
+| 2026-07-02 | Claude | Resolved Q-018 — Factions/ system is dead/unfinished (→ RD-030) |
+| 2026-07-02 | Claude | Added Q-023 (magRepack third-party licensing) from Scripts review |

@@ -199,6 +199,46 @@ hardcode mod-specific classnames (`SPE_*`, `Land_vn_*`, `vn_*`) that would error
 in the release PBO; the SPE/VN MotorPool builders `diag_log` every placed object; commented-out Map-Builder export
 scaffolding is left throughout the template files. _(Sprint 7.)_
 
+## RD-030 — Unfinished/dead faction-abstraction system (`Factions/`)
+**Severity:** low · **Status:** open
+`Factions/*.sqf` + `A3E_fnc_loadFaction`/`selectFaction`/`getRndEntryFromFaction` implement a data-driven faction
+system (a faction file → key/value unit pools; per-side pools `A3E_*Factions`; random unit picks) — but it is
+**never wired in**: the functions have **no callers** and the side pools are **never populated** (only
+`Factions/BIS_Syndikat.sqf` was ever authored, and `selectFaction` has an unimplemented positional-selection TODO).
+The live unit system is `Mods/{Mod}/UnitClasses.sqf`. **Port decision:** either delete this dead system, or *finish
+it* — a data-driven faction abstraction is arguably a cleaner fit for Reforger than the scattered
+`Mods/UnitClasses` classname globals. Resolves Q-018. _(Coverage review.)_
+
+## RD-031 — `Code/Scripts/` legacy dead / superseded code
+**Severity:** low · **Status:** open
+Dead/superseded scripts under `Code/Scripts/`: `Escape/AIskills.sqf` (loaded at `initServer:13` but its
+`EGG_EVO_skill` has no live callers), `Escape/SearchLeader.sqf` (commented `//depreciated` at `initServer:236` —
+confirms RD-019; superseded by the `Code/functions/SearchLeader/` category), several `drn_fnc_CL_*` in
+`DRN/CommonLib/CommonLib.sqf` (`InitParams`/`GetMarkerWithinRange`/`GetClosestMarker`/`RotatePosition`/`AddScore*`
+unused; the garbage collector's body is fully commented out — inert), and possibly-shadowed helpers in
+`Escape/Functions.sqf`. Prune during the port. _(Scripts review.)_
+
+## RD-032 — Reinforcement system (`EscapeSurprises`/`*Chopper`) fragility & leaks
+**Severity:** medium · **Status:** open
+`Code/Scripts/Escape/EscapeSurprises.sqf` appends a successor entry on every firing and never removes executed
+entries, so its `foreach` scans an ever-growing `_surprises` list (memory/CPU leak on long sessions).
+`DropChopper.sqf`'s cleanup `while{!missionCompleted}` never exits if the chopper dies mid-flight (leaked thread +
+wreck; no death/abort guard). `CreateDropChopper`/`CreateSearchChopper` share the `drn_searchChopperN` global
+var-name family with independent counters — collision avoided only coincidentally. _(Scripts review.)_
+
+## RD-033 — Bundled third-party scripts: port / licensing debt
+**Severity:** low · **Status:** open
+`Code/Scripts/outlw_magRepack/*` (Outlawled/GiPPO Mag Repack v3.1.3, 2015) is bundled with **no license stated
+in-file** (see Q-023) and is entirely Arma-3 dialog/magazine API — **do not port; reimplement natively if wanted**
+(stray `}:` typo at `MagRepack_Main.sqf` ~:898). `Code/Scripts/AT/hackdrone.sqf` hard-codes vanilla + `*_lxWS`
+UAV/terminal classname lists (silently no-ops on other modsets); the Reforger UAV model differs — redesign or drop. _(Scripts review.)_
+
+## RD-034 — Iso roadblock template schema cruft
+**Severity:** low · **Status:** open
+In `Code/templates/*.sqf`: the `["probability",N]` attribute on optional gun slots (rb_bis_rb2/rb4, rb_gm_rb3) is
+**never read** by `isoTemplateRestore`/`RoadBlocks`, so those slots always emit; and the `ammoboxes` slot type is
+fully unused on both producer and consumer sides. Minor schema debt to drop/implement in the port. _(Iso-templates review.)_
+
 ---
 
 _Format for new entries:_
@@ -220,3 +260,5 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added RD-021…024 from code-reference Sprint 5 (Server/init) |
 | 2026-07-02 | Claude | Added RD-025 + corrected RD-018 (DRN traffic dead) from Sprint 6 (DRN) |
 | 2026-07-02 | Claude | Added RD-026…029 from code-reference Sprint 7 (Templates) |
+| 2026-07-02 | Claude | Added RD-030 (dead/unfinished Factions/ faction-abstraction system) |
+| 2026-07-02 | Claude | Added RD-031…034 from Scripts/ + Iso-templates review |
