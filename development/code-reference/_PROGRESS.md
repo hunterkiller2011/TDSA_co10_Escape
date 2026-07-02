@@ -23,7 +23,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | 4 | Spawning, SearchLeader, Statistics | 36 | **done** |
 | 5 | Server, _init-and-includes | 38 | **done** |
 | 6 | DRN | 20 | **done** |
-| 7 | Templates (dedupe variants) | 45 | pending |
+| 7 | Templates (dedupe variants) | 45 | **in-progress** (by family) |
 
 ## Per-category status
 
@@ -44,7 +44,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | Server | [Server.md](Server.md) | 30 | done |
 | _init & includes | [_init-and-includes.md](_init-and-includes.md) | 8 | done |
 | DRN | [DRN.md](DRN.md) | 20 | done |
-| Templates | [Templates.md](Templates.md) | 45 | pending |
+| Templates | [Templates.md](Templates.md) | 45 | in-progress (families: BuildPrison…) |
 
 ## Concern intake (consolidated into trackers centrally)
 
@@ -123,6 +123,22 @@ _Raw agent notes (DRN = legacy third-party ambient-AI library; much is supersede
 - RD/tech-debt (whole library): hard external dependency on legacy DRN CommonLib (`drn_fnc_CL_*` + `a3e_var_commonLibInitialized` nag-loops) across ~10 functions; pervasive unused `private` declarations; magic-index soldier-record schemas that DIFFER between `PopulateVillage` and `PopulateLocation` (data-format drift); `A3E_*`/`a3e_*`/`drn_*` casing/namespace straddle (RD-008), esp. `InitVillageMarkers` registered/called under both `drn` and `A3E_fnc_`.
 - Q (`AmbientInfantry`): hardcoded 6:5 Ind:Opfor faction weighting (line 46) carries the author's own `//WHY!?!?!?!?!` comment — intent unknown; `_minUnitsInGroup`/`_maxUnitsInGroup` params are dead (squad size from `getDynamicSquadSize`).
 
+**Sprint 7 intake (Templates)** — accumulating per family; folded into trackers at Sprint 7 end.
+
+_BuildPrison family (6):_
+- **BUG-candidate (potential mission-breaker):** prisons that use a whole *building* as the gate object
+  (`BuildPrison2`=`Land_Shed_05_F`, `BuildPrison4`=`Land_Slum_House03_F`, `BuildPrison5`=`Land_Slum_House02_F`, set
+  as `A3E_PrisonGateObject`) rely on `initServer.sqf:647-649` polling `animationPhase "Door_1_rot"/"Door_2_rot" > 0.5`
+  for escape detection. If those base-game classes don't expose exactly those animation sources, the gate-open
+  (escape) condition never fires for those layouts — verify in-game/config.
+- RD (duplication): 6 near-identical Map-Builder exports; collapse to one data-driven builder fed an object array.
+- RD: ~35-50 decorative `createVehicleLocal` objects per client, never tracked/despawned (benign; built once/session).
+- RD: hardcoded vanilla classnames (`Land_TinWall_01_*`, `Land_Shed_0[57]_F`, `Land_Slum_House0[23]_F`, …) — a
+  rename/removal silently drops objects, no error handling.
+- Q: `fn_BuildPrison` (the `Land_City_Gate_F` variant) does not set `allowDamage false` on its gate, unlike the 5
+  siblings — intentional (destructible) or oversight?
+- Q: `A3E_PrisonGateObject` is a plain global (not `publicVariable`'d) unlike `A3E_PrisonLoudspeakerObject`.
+
 ## Revision History
 
 | Date | Author | Change |
@@ -133,5 +149,6 @@ _Raw agent notes (DRN = legacy third-party ambient-AI library; much is supersede
 | 2026-07-01 | Claude | Sprint 4 (Spawning/SearchLeader/Statistics, 36) documented; findings folded; security-privacy updated |
 | 2026-07-02 | Claude | Sprint 5 (Server/_init, 38) documented; findings folded; security-privacy hardening added |
 | 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; corrected DRN live/dead (if(false) block); findings folded |
+| 2026-07-02 | Claude | Sprint 7 in progress by family — BuildPrison (6/45) documented; findings stashed |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |
 | 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; concerns listed for tracker intake |
