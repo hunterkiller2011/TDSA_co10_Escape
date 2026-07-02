@@ -109,6 +109,10 @@ A legacy `a3e_patrolZones` + BIS-pairs API (`initPatrolZone`/`activatePatrolZone
 coexists with the newer `A3E_Zones` HashMap framework (`initZone`/`populateLocationZone`/`populateVillageZone`).
 `initServer` also spawns a DRN `MilitaryTraffic` alongside the Spawning one — possible duplicate systems.
 Determine which is authoritative before porting. See Q-015. _(Sprint 4.)_
+**Update (analysis):** `A3E_fnc_initPatrolZone` has **no callers** anywhere in the repo (grep) and is a stale
+near-duplicate of the live `A3E_fnc_initZone` — the old `patrolZones` framework appears dead. It carries a
+latent `_x`-for-`_shape` typo (`:31-34`), harmless only because it is unreachable. Confirm
+`activatePatrolZone`/`deactivatePatrolZone` are likewise unused, then remove the old framework.
 
 ## RD-019 — SearchLeader dead/legacy residue
 **Severity:** low · **Status:** open

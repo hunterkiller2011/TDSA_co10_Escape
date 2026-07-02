@@ -30,6 +30,10 @@ problem, also log it in the trackers and link the ID back here:
 >   `_fnc_scriptName`. Only flag one if it is used **outside** any such construct — always check the
 >   enclosing scope first (an `_x` at top-level function scope with no surrounding iterator *is* a real
 >   defect; an `_x` inside a `forEach` block is correct).
+> - **`call`/`spawn` inherit the caller's locals:** a called function or code block can read local variables
+>   (including a `forEach` `_x`) from the scope that invoked it, unless it re-declares them (`params`/`private`).
+>   So a bare `_x` in a function may be legitimately supplied by a caller's loop — trace the **call chain**
+>   (who calls it, and is that call site inside a `forEach`?), not just the function's own body, before flagging.
 > - **Case-insensitivity:** function/command names are case-insensitive (`a3e_fnc_Foo` == `A3E_FNC_FOO`);
 >   casing mismatches are style noise (tracked as RD-008), not bugs.
 > - Verify any suspected undefined variable against its enclosing scope before recording it as a bug.

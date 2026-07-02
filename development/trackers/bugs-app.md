@@ -93,9 +93,10 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** medium · **confirmed**
 - **Repro / context:** `Code/functions/Spawning/fn_populateVillageZone.sqf:8` tests `_zoneArea`, but the value read is `_area` (`:5`); `_zoneArea` is undefined so the ">5000 ⇒ add Opfor" branch never runs. Also leftover `systemchat str _patrolCount` (`:37`) broadcasts to all clients.
 
-## BUG-021 — Undefined-variable cluster in Spawning zone/spawn functions
-- **Status:** open · **Severity:** medium · **confirmed** (populateLocationZone, initPatrolZone) / candidate (findSpawnPosBuilding)
-- **Repro / context:** Verified each `_x` is at **top-level function scope, outside any `forEach`/`count`/`select`**, so it is genuinely nil (not the SQF magic iterator): `populateLocationZone.sqf:32` passes `_x` to `getBuildingsInMarker` where the zone marker `_marker` (`:4`) was intended (also computes an unused `_guardCount` at `:36`); `initPatrolZone.sqf:31-34` index `_x select 0..3` for marker setup where the `_shape` param tuple (`:16`, cf. `:18-21`) was intended. `findSpawnPosBuilding.sqf:156` references undefined `_site`/`_newGrp` (candidate — not re-verified). Same undefined-local family as BUG-014/019.
+## BUG-021 — `populateLocationZone` passes undefined `_x` to getBuildingsInMarker
+- **Status:** open · **Severity:** medium · **confirmed** (call chain traced)
+- **Repro / context:** `Code/functions/Spawning/fn_populateLocationZone.sqf:32` — `[_x] call a3e_fnc_getBuildingsInMarker`. It is dispatched dynamically: `Zones/fn_initLocationZone.sqf:4` registers `"A3E_FNC_populateLocationZone"` as the zone `oninit`, invoked at `Zones/fn_activateZone.sqf:20` (`[_zoneIndex] call (getVariable _onInit)`), itself fired by the zone trigger (`Zones/fn_initZone.sqf:56`). **No frame in that chain is inside a `forEach`** — checked specifically because SQF `call` would otherwise inherit an enclosing loop's `_x` — so `_x` is genuinely nil. The intended variable is the zone marker `_marker` (`:4`). Also computes an unused `_guardCount` (`:36`).
+- **Notes:** `findSpawnPosBuilding.sqf:156` (`_site`/`_newGrp`) is a separate candidate — not re-verified against caller scope. The `initPatrolZone.sqf:31-34` `_x`-for-`_shape` case originally grouped here is **dead code** (function has no callers; superseded by `initZone`, which does the marker setup correctly) — moved to RD-018.
 
 ## BUG-022 — `StartSession` duplicates the `server=` query param
 - **Status:** open · **Severity:** low · **confirmed**
