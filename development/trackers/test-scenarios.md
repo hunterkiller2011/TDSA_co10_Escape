@@ -33,7 +33,10 @@ whether a force-template flag should be added). Otherwise replay until the targe
 - **Expected:** escape triggers for ALL six layouts. If a building-as-gate layout does NOT trigger → BUG-028 is
   real for that class. If all trigger → BUG-028 is a false positive; then **trace the actual escape-detection
   path(s)** beyond `initServer.sqf:647-649` and record it.
-- **Status:** planned.
+- **Update (static trace, 2026-07-02):** escape has **3 triggers** — weapon pickup (`count weapons > 0`),
+  moving 15–100 m from start, and gate-door open — so it **can't softlock**; **BUG-028 is resolved as a false
+  positive**. This scenario is now optional, only useful to confirm the *gate-open alarm* for building-as-gate layouts.
+- **Status:** low priority (BUG-028 resolved statically).
 
 ## TS-002 — Roadblock alignment with road & structure
 - **Confirms/denies:** BUG-029 (Iso roadblock manned slots misaligned under rotation).
@@ -78,6 +81,17 @@ whether a force-template flag should be added). Otherwise replay until the targe
 
 ---
 
+## TS-006 — Prison guards should not enter the prison
+- **Confirms/denies:** BUG-030 (guards patrol into the prison → near-instant-failure risk).
+- **Config:** any world; higher difficulty (more guards); watch the prison area from spawn across several restarts.
+- **Milestones:** observe the guards' patrol paths for ~2 min from spawn — note whether any guard walks into the
+  prison interior / clips the door, and how soon after spawn it happens; note whether it leads to an early failure.
+- **Expected (desired):** guards patrol *around* the prison and never path inside. Current behavior (guards
+  entering, sometimes within seconds) confirms BUG-030 — `drn_guardAreaMarker` is a 50 m ellipse centered on the prison.
+- **Status:** planned (user reports this occurs frequently).
+
+---
+
 _Format for new entries:_
 ```
 ## TS-NNN — <short title>
@@ -94,3 +108,4 @@ _Format for new entries:_
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-07-02 | Claude | Created; seeded TS-001…005 from Sprint-review findings |
+| 2026-07-02 | Claude | TS-001 updated (BUG-028 resolved via static trace); added TS-006 (guards enter prison) |

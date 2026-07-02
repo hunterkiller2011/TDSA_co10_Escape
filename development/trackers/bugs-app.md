@@ -127,14 +127,34 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** low-medium · **candidate — verify**
 - **Repro / context:** In DRN functions that are still live (the search/insertion path): `fn_SearchGroup.sqf` uses `grpNull` as the default for a **marker-name** parameter (type mismatch); `fn_MotorizedSearchGroup.sqf` issues a duplicate `addWaypoint`; `fn_InsertionTruck.sqf` does an unconditional `player sideChat` (null on dedicated servers; UI/log spam). The aquatic/ambient DRN bug candidates are moot — those functions are dead (see RD-025).
 
-## BUG-028 — Building-as-gate prisons: escape-detection path unclear (likely FALSE POSITIVE)
-- **Status:** open · **Severity:** low · **likely false positive — escape fires reliably in thousands of live sessions; see [TS-001](test-scenarios.md)**
-- **Repro / context:** `Server/fn_initServer.sqf:647-649` detects prison escape by polling `A3E_PrisonGateObject animationPhase "Door_1_rot"/"Door_2_rot" > 0.5`; `BuildPrison2` (`Land_Shed_05_F`), `BuildPrison4` (`Land_Slum_House03_F`), `BuildPrison5` (`Land_Slum_House02_F`) store a whole *building* as `A3E_PrisonGateObject`.
-- **Reality check:** escape works across all prisons in normal play, so the original "mission-breaker" analysis — which assumed that poll is the **only** escape-detection path — is almost certainly incomplete (either those classes DO expose those animation sources, or other detection paths exist that weren't traced). **Action:** run TS-001 and trace the full escape-detection logic; do not treat as a real bug unless a scenario fails.
+## BUG-028 — Building-as-gate prisons escape detection — RESOLVED (false positive)
+- **Status:** closed — false positive (traced) · **Severity:** n/a
+- **Finding:** `A3E_EscapeHasStarted` (the escape state) is set by **three independent triggers** in
+  `fn_initServer.sqf`, not just the gate animation: (1) a player moves **15–100 m** from `A3E_StartPos` (`:613`);
+  (2) a player **picks up a weapon** — `count weapons _x > 0` (`:617-618`); (3) the gate/door animates open —
+  `animationPhase "Door_1_rot"/"Door_2_rot" > 0.5` (`:647-655`, which also sounds the alarm). So even if a
+  building-as-gate prison never animates a door, escape still starts via the weapon-pickup or distance triggers —
+  the mission is **never softlocked**; the door poll only drives the *alarm* for those layouts. (Guard
+  `knowsAbout > 2.5` sounds the alarm but does not start escape, `:641`.) Confirms the empirical evidence.
 
 ## BUG-029 — Iso roadblock manned slots misaligned under rotation (candidate)
 - **Status:** open · **Severity:** medium · **candidate — verify**
 - **Repro / context:** `Templates/fn_isoTemplateRestore.sqf` applies `setDir (_dir + _rotation)` to created scenery but stores manned-slot `dir` **raw**; `Server/fn_RoadBlocks.sqf:68-72` then re-applies the raw `_dir` without adding `_rotation`, so spawned manned vehicles / static gunners are misaligned vs the rotated static composition whenever `_rotation ≠ 0`. Live roadblock path.
+
+## BUG-030 — Prison guards patrol into the prison (near-instant-failure risk)
+- **Status:** open · **Severity:** medium-high (gameplay) · **confirmed (code + playtest)**
+- **Repro / context:** Prison guards (3–8, `fn_initServer.sqf:460-580`) are given the patrol marker
+  `drn_guardAreaMarker` — a **50×50 m ELLIPSE centered on `A3E_StartPos`, i.e. on the prison itself** (`:475-477`)
+  — via `[_guardGroup,_marker] spawn A3E_fnc_Patrol` (`:578`). *Spawn* positions are kept ≥10 m from center
+  (`:491-494`), but *patrol waypoints are not* — `A3E_fnc_Patrol` picks random points anywhere in the marker,
+  including the prison interior, so guards walk into the prison (clipping through the Map-Builder door/walls),
+  sometimes within seconds of spawn.
+- **Why it causes instant failure:** players are captive until escape starts, but **picking up a weapon to prep
+  instantly starts the escape** (BUG-028 trigger #2), un-captiving the players and revealing them to guards — if a
+  guard has already clipped inside, that's a point-blank engagement with no time to react.
+- **Fix direction:** exclude the prison footprint from the guard patrol (patrol a ring/donut outside the walls, or
+  add a keep-out radius to the patrol waypoint selection in `A3E_fnc_Patrol`/the marker), and/or suppress the
+  weapon-pickup escape trigger while a guard is inside the prison. Test with TS-006. _(User-reported; code-confirmed.)_
 
 ---
 
@@ -160,3 +180,4 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added BUG-027 from code-reference Sprint 6 (DRN) |
 | 2026-07-02 | Claude | Added BUG-028…029 from code-reference Sprint 7 (Templates) |
 | 2026-07-02 | Claude | Added reality-check note; reframed BUG-028 as likely false positive (→ TS-001) |
+| 2026-07-02 | Claude | Traced prison escape (3 triggers) → BUG-028 RESOLVED (false positive); added BUG-030 (guards patrol into prison) |
