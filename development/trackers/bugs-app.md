@@ -106,6 +106,18 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** low · **candidate — verify**
 - **Repro / context:** `Code/functions/SearchLeader/fn_ReportToHQ.sqf:29` — an `&&` combines `(_grp knowsAbout …) >= threshold` with `{alive _x} count (units _grp) > 0`; verify precedence yields the intended "knows enough AND has living units".
 
+## BUG-024 — `createMotorPools` publishes inconsistent position-list element shape (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Code/functions/Server/fn_createMotorPools.sqf` — `a3e_var_Escape_MotorPoolPositions` is filled with plain positions (`:75/86`) then overwritten with `[pos,dir]` marker tuples (`:89`); the published value ends up tuples. Any consumer expecting plain positions (e.g. `CheckCampDistance`) would misread element shape.
+
+## BUG-025 — Site-placement early-out returns before building (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `fn_createAmmoDepots.sqf` / `fn_createMortarSites.sqf` — the placement loop has `if(_i>100) exitWith {_positions}` which returns *before* the template/zone is built, so 100 failed placement attempts silently yield a partial map (no depot/site) with no error.
+
+## BUG-026 — `createMortarSites` mutates global count vars in place (candidate)
+- **Status:** open · **Severity:** low · **candidate — verify**
+- **Repro / context:** `fn_createMortarSites.sqf` — `A3E_MortarSiteCountMin/Max *= A3E_Param_Artillery` mutates the *globals* rather than locals; safe only because called once, but a second call would compound (latent re-entrancy).
+
 ---
 
 _Format for new entries:_
@@ -126,3 +138,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added BUG-009…013 from code-reference Sprint 2 (Common) |
 | 2026-07-01 | Claude | Added BUG-014…018 from code-reference Sprint 3 (AI) |
 | 2026-07-01 | Claude | Added BUG-019…023 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
+| 2026-07-02 | Claude | Added BUG-024…026 from code-reference Sprint 5 (Server) |

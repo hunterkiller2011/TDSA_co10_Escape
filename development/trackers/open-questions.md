@@ -97,6 +97,23 @@ dedicated server (no UI) this may never fire, silently no-op'ing the whole exter
 `A3E_var_PlayerCanBeDetected` is a single global latch shared by the OPFOR and Independent detection triggers,
 so only one side can report a sighting at a time. Intended, or should each side latch independently? _(Surfaced Sprint 4.)_
 
+## Q-018 — Faction functions: live via dynamic dispatch, or dead?
+**Status:** open
+`getRndEntryFromFaction`, `loadFaction`, `selectFaction` have no static `fnc_` callers in `_xref` — reached via
+dynamic `call compile` dispatch, or genuinely dead? Also `selectFaction`'s geographic/positional selection is an
+unimplemented TODO (always random). Confirm before porting the faction system. _(Surfaced Sprint 5.)_
+
+## Q-019 — Lobby params vs CBA settings precedence
+**Status:** open
+Parameters exist both as lobby params (`params.hpp`) and CBA settings (`XEH_preInit.sqf`), gated by
+`A3E_UseCBASettings`, and are also resolved by `parameterInit`. Which source wins when they disagree? _(Surfaced Sprint 5.)_
+
+## Q-020 — Init ordering / serialization
+**Status:** open
+`fn_bootstrapEscape` spawns `missionFlow` and `initServer` in parallel with no ordering guarantee — race if one
+reads the other's globals? And `initServer` does `waitUntil {scriptDone _scriptHandle}` on the search-chopper
+`execVM` (`:452`), serializing init behind chopper creation — intentional? _(Surfaced Sprint 5.)_
+
 ---
 
 _Format for new entries:_
@@ -115,3 +132,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added Q-011, Q-012 from code-reference Sprint 2 (Common) |
 | 2026-07-01 | Claude | Added Q-013, Q-014 from code-reference Sprint 3 (AI) |
 | 2026-07-01 | Claude | Added Q-015…017 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
+| 2026-07-02 | Claude | Added Q-018…020 from code-reference Sprint 5 (Server/init) |

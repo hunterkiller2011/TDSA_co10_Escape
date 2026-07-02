@@ -1,108 +1,109 @@
 # Code Reference — Init & Includes
-_Last updated: 2026-06-30 (local)_ · _Status: skeleton_
+_Last updated: 2026-06-30 (local)_ · _Status: documented_
 
 > Entry points, the initialization chain, and the include/config files that define how the mission is
-> wired together. One entry per file. Fields are stubs (`_(to document)_`) until documented. See
+> wired together. One entry per file. Fields were stubs (`_(to document)_`) until documented. See
 > [README.md](README.md) for field definitions and [_xref.md](_xref.md) for callers.
 
-### `Code/description.ext`  ·  _status: stub_
-- **Purpose:** _(to document — mission config; CfgFunctions include; CBA PreInit event handler wiring; EscapeBuild)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — engine, at mission load)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/description.ext`  ·  _status: documented_
+- **Purpose:** The mission root config that the engine parses at load. It sets mission metadata (name, players, load screen), declares the `Extended_PreInit_EventHandlers` CBA hook that runs `XEH_preInit.sqf`, and `#include`s the parameter/function/mag-repack configs. It also stamps the build identity (`EscapeIsland`/`EscapeMod`/`EscapeVersion`/`EscapeRelease`/`EscapeBuild`) from `defines.hpp` macros and wires the revive UI (`RscTitles` hindsight cam), debriefing sections, remoteExec whitelist, allowed HTML URIs, and the leaflet config.
+- **Inputs:** Preprocessor macros from `include/defines.hpp` (`MISSIONNAME`, `MISSIONNAMEFULL`, `ISLAND`, `MOD`, `VERSION`, `RELEASE`, `BUILD`, control-style constants). The compiler substitutes the `{* … *}` tokens at build time. Localization keys (`$STR_A3E_*`) from stringtable.
+- **Outputs:** Global mission config exposed to the engine: `Header` (gameType `co10esc`, 1–10 players), respawn config (`INSTANT`, 5 s), `disabledAI=1`, `enableDebugConsole=1`, `allowFunctionsRecompile=1`, corpse/wreck cleanup limits, `cba_settings_hasSettingsFile=1`, `CfgDebriefing`/`CfgDebriefingSections` (End1–End4 + `A3EStatistics`), `CfgRemoteExec` whitelist, `RscTitles` (`HSC_View` idd 620000), `CfgCommands.allowedHTMLLoadURIs` (stats API endpoints), `CfgLeaflets`.
+- **Calls:** No SQF at parse time; via `#include` it pulls in `include\defines.hpp` (line 1), `include\params.hpp` (92), `include\functions.hpp` (93), `Scripts\outlw_magRepack\MagRepack_config.hpp` (95). The PreInit EH string (line 30) later runs `XEH_preInit.sqf`.
+- **Called by:** The engine at mission load (the root `description.ext` is read automatically).
+- **Processing:** (1) `#include defines.hpp`; (2) declare `Header`; (3) set metadata + `Escape*` build-identity properties + `cba_settings_hasSettingsFile`; (4) register the CBA `Extended_PreInit_EventHandlers` → `XEH_preInit.sqf` (lines 28–32); (5) engine mission settings (respawn, debug console, cleanup limits); (6) debriefing config; (7) `#include` params/functions/magrepack; (8) remoteExec, RscTitles, HTML URIs, leaflet configs.
+- **Theory of operation:** `description.ext` is the single manifest the engine trusts. Everything the mission needs registered before scripts run (CfgFunctions, params, CBA PreInit hook, UI resources, remoteExec security) lives here so it is available from the earliest init phase. The `{* … *}` token substitution lets one source tree be compiled into per-island/per-mod PBOs (see `Editing_and_Porting/Tools/Compiler`).
+- **Whys & questions:** `cba_settings_hasSettingsFile=1` pairs with `XEH_preInit.sqf` building CBA settings so admins can persist config in a settings file. `enableDebugConsole=1` and `allowFunctionsRecompile=1` are dev-friendly and would normally be tightened for a public release. `CfgRemoteExec.Functions.mode=2` (ignore whitelist) is permissive — only `a3e_fnc_initPlayer` is explicitly whitelisted; the `moveInAny` command is locked to `allowedTargets=0`.
+- **Unresolved issues:** `mode=2` remoteExec (whitelist ignored) is a security/tech-debt concern for a hardened build (candidate RD). `allowedHTMLLoadURIs` includes `http://localhost:5093/api/session` (a dev endpoint) and plain-HTTP stat endpoints — leftover dev config / cleartext (candidate RD). `enableDebugConsole=1` in shipped missions is a candidate RD.
+- **Reforger port notes:** Enfusion has no `description.ext`; mission metadata, respawn, and gameplay config live in the world's `.ent` scenario config and game-mode components (`SCR_BaseGameMode`, respawn components). CBA settings → Reforger config classes / `m_Config` attributes or a settings component. `RscTitles`/`RscHTML` UI → Enfusion layouts (`.layout`) + `MenuBase`/widget scripts. `CfgRemoteExec` whitelist → Enfusion RPC authority model (server-authoritative by default). The `{* … *}` compile-time substitution becomes per-scenario config or addon variants.
 
-### `Code/XEH_preInit.sqf`  ·  _status: stub_
-- **Purpose:** _(to document — creates CBA settings from mission parameters)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — CfgFunctions PreInit EH in description.ext)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/XEH_preInit.sqf`  ·  _status: documented_
+- **Purpose:** Translates each mission parameter class declared in `params.hpp` into a live CBA setting so the mission's parameters are also editable/persistable through the CBA Settings menu (not only the lobby parameter screen).
+- **Inputs:** `missionConfigFile >> "Params"` (the `Params` class tree from `params.hpp`, embedded in `description.ext`). Per-class fields read: `title`, `values`, `texts`, `default`, and optional `tooltip`, `livechanges`, `code`. `#include defines.hpp` at line 1 for macros.
+- **Outputs:** For every non-spacer param, one CBA setting registered via `CBA_fnc_addSetting` under category `"co10 Escape"`. Setting name = the param `configName` (e.g. `A3E_Param_EnemySkill`), except `A3E_Param_Loadparams` is remapped to a `A3E_UseCBASettings` CHECKBOX. Type is `LIST` (or CHECKBOX for the load-params toggle). Side effect: CBA setting state that later resolves into the `A3E_Param_*` globals the rest of the mission reads.
+- **Calls:** `BIS_fnc_returnConfigEntry` (to read optional `tooltip`/`livechanges`/`code`), `compile` (on the `code` string), `CBA_fnc_addSetting`, plus `configClasses` iteration.
+- **Called by:** The CBA `Extended_PreInit_EventHandlers` class `a3e` in `description.ext` (line 30), during the PreInit phase — before objects are initialized.
+- **Processing:** `forEach ('true' configClasses (missionConfigFile >> "Params"))`: read `title`/`values`; if `count values <= 1` treat as a spacer (strip `=` decoration, skip registration); else read name/texts/default/tooltip/livechanges/code, default tooltip to title, build a `LIST` value-info `[values, texts, values find default]`, special-case `A3E_Param_Loadparams`→`A3E_UseCBASettings` CHECKBOX, then call `CBA_fnc_addSetting` with `[name, type, [title, tooltip], category, valueInfo, 1, compile code, livechanges?true:false]`.
+- **Theory of operation:** The mission has two config surfaces — the lobby parameter screen (`params.hpp`) and CBA Settings. Rather than maintain both by hand, this script derives CBA settings from the single `params.hpp` source of truth at PreInit, keeping them in sync and enabling server-side persistence (`cba_settings_hasSettingsFile`).
+- **Whys & questions:** Commented-out block (lines 32–39) shows an abandoned attempt to auto-detect boolean 0/1 params and render them as CHECKBOXes; left as LIST instead. The subcategory idea (lines 12–13) was dropped because CBA sorts settings groups. `livechanges` maps to CBA's "requires restart" flag inverted (`[true,false] select _livechanges`).
+- **Unresolved issues:** Relationship/precedence between lobby params and CBA settings (which wins when both are set, driven by `A3E_UseCBASettings`) is worth confirming against `parameterInit` (candidate Q). `compile _code` runs arbitrary config-supplied code as the setting's callback — fine here since config is trusted, but a coupling to note.
+- **Reforger port notes:** No CBA in Enfusion. Settings map to Reforger's config/attribute system or a dedicated settings component with replicated variables. The "derive settings from a param table" pattern would be replaced by authored config classes; persistence uses Reforger's save/config mechanisms instead of a CBA settings file.
 
-### `Code/functions/Common/fn_bootstrapEscape.sqf`  ·  _status: stub_
-- **Purpose:** _(to document — postInit; compiles config.sqf + per-island configs; spawns missionFlow/initServer/initLocalPlayer)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — CfgFunctions postInit=1)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/functions/Common/fn_bootstrapEscape.sqf`  ·  _status: documented_
+- **Purpose:** The postInit entry point. It compiles the runtime config and per-island config scripts, validates that the island config loaded, then branches into server-side orchestration (`missionFlow` + `initServer`) and client-side player init (`initLocalPlayer`).
+- **Inputs:** Files it preprocesses: `config.sqf`, `Island\WorldConfig.sqf`, `Island\VillageMarkers.sqf`, `Island\CommunicationCenterMarkers.sqf`. Reads globals defined by those files (`A3E_WorldName`, `a3e_villageMarkers`, `a3e_communicationCenterMarkers`). Engine context: `isServer`, `hasInterface`.
+- **Outputs:** Compiles/defines all `a3e_var_*` runtime config globals (via `config.sqf`) and the per-island data globals. Spawns three threads: on server `a3e_fnc_missionFlow` and `a3e_fnc_initServer`; on any machine with an interface, a title-screen thread that calls `a3e_fnc_initLocalPlayer`. Throws (aborts init) if any required island config global is `nil`.
+- **Calls:** `compile preprocessFileLineNumbers` on `config.sqf` and the three `Island\*.sqf` files; `A3E_fnc_log` (on error); `a3e_fnc_missionFlow`, `a3e_fnc_initServer` (server `spawn`); `a3e_fnc_initLocalPlayer` (client `call`); `titleText`/`titleFadeOut` for the loading overlay.
+- **Called by:** CfgFunctions `postInit=1` on `A3E::Common::BootstrapEscape` (`functions.hpp` line 10) — the engine runs it automatically after objects initialize, on every machine.
+- **Processing:** (1) `diag_log` start; (2) compile `config.sqf`; (3) compile the three island config scripts by path; (4) guard-check `A3E_WorldName`, `a3e_villageMarkers`, `a3e_communicationCenterMarkers` — log + `throw` if missing; (5) if `isServer`: `spawn missionFlow` and `spawn initServer`; (6) if `hasInterface`: spawn a thread that shows a black loading title, `call initLocalPlayer`, sleeps 2 s, then fades out.
+- **Theory of operation:** postInit is the first point where objects (players, editor placements) exist, so config that must be present before any gameplay function runs is compiled here. Splitting server vs. interface work matches Arma's locality model: `initServer` builds the world authoritatively on the server; `initLocalPlayer` sets up each client. The early `throw` fails loud if a per-island config PBO is malformed rather than letting the mission run half-initialized.
+- **Whys & questions:** Config is loaded via `call compile preprocessFileLineNumbers` (runtime script) rather than config classes so per-island data can be swapped per-PBO by the compiler. `missionFlow` and `initServer` are separate spawns (parallel) — `missionFlow` presumably owns win/lose flow while `initServer` builds the world (confirm ordering assumptions against `Server.md`). Commented line 4 shows an older single-`WorldConfig.sqf` path superseded by the split `Island\*` layout.
+- **Unresolved issues:** No explicit ordering guarantee between the `missionFlow` and `initServer` spawns if one depends on the other's globals (candidate Q — verify no race). The three island files are compiled with `[] call` but `config.sqf` with a bare `call` (line 3) — inconsistent but harmless (style, candidate RD).
+- **Reforger port notes:** Enfusion init is component/event-driven (`SCR_BaseGameMode` `OnGameStart`/`EOnInit`, `RplComponent` for locality) rather than a single postInit script. Server-vs-client branching → authority checks (`Replication.IsServer()` / `IsRunning`) and player controller components. Per-island config compiled from `.sqf` → data in the world config or JSON/config resources loaded by a game-mode component.
 
-### `Code/functions/Server/fn_initServer.sqf`  ·  _status: stub_
-- **Purpose:** _(to document — server main: templates, factions, zones, prison/COM/ammo/mortar/crash, extraction, search leader, Chronos registration)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — spawned by fn_bootstrapEscape on server)_
-- **Processing:** _(to document — 697 lines; break into sections)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/functions/Server/fn_initServer.sqf`  ·  _status: documented_
+- **Purpose:** The authoritative server orchestrator. Spawned once on the server by `fn_bootstrapEscape`, it stands up the entire mission world: parameters → skills/difficulty → factions → environment → start position → dynamic sites → AI/search systems → statistics → prison guards & escape-detection → Chronos scheduling. This entry keeps the section-by-section detail brief on purpose — the full per-section breakdown lives in **[Server.md](Server.md)** (the `A3E::Server` category doc); consult it for callee-level detail.
+- **Inputs:** `A3E_Param_*` globals (skill, frequency, spawn distance, village count, time of day, time multiplier, war-torn, revive view, no-NVG, debug), populated by `a3e_fnc_parameterInit`. Faction globals `A3E_VAR_Side_*` and unit-class arrays (from `Units\UnitClasses.sqf` / `loadLocalClasses`). Island config globals (world name, markers) already compiled by bootstrap. `config.sqf` `a3e_var_*` values. Map markers (`A3E_ExclusionZone*`, `drn_*` positions).
+- **Outputs:** Publishes many globals (`A3E_Debug`, `ACE_MedicalServer`, `A3E_StartPos`, `A3E_VAR_Flag_Ind`, `a3e_var_Escape_hoursSkipped`, `a3e_var_Escape_AllPlayersDead`/`MissionComplete`, `A3E_EscapeHasStarted`, `A3E_SoundPrisonAlarm`, `a3e_var_Escape_enemyMin/MaxSkill`, etc.); sets faction relations, date/time/time-multiplier; spawns COM centers, motor pools, ammo depots, mortar/crash sites, road blocks, search chopper, traps, prison guard groups; registers Chronos jobs. Defines helper globals `A3E_fnc_revealPlayers`/`A3E_fnc_soundAlarm`.
+- **Calls (high level):** `a3e_fnc_parameterInit`, `a3e_fnc_debugmsg`, `A3E_fnc_LoadStatistics`, `a3e_fnc_loadLocalClasses`, `a3e_fnc_loadTemplates`, `A3E_fnc_weather`, `bis_fnc_setDate`, `a3e_fnc_findFlatArea`, `A3E_fnc_createStartpos`, `A3E_fnc_InitVillageMarkers`, `A3E_fnc_GetPlayers`/`GetPlayerGroup`, `A3E_fnc_CreateComCenters`/`CreateMotorPools`/`CreateAmmoDepots`/`createMortarSites`/`createCrashSites`, `A3E_fnc_SearchleaderInit`, `A3E_fnc_PlayerDetection`, `A3E_fnc_initVillages`, `A3E_fnc_startStatistics`, `A3E_fnc_RoadBlocks`, `A3E_fnc_InitTraps`, `a3e_fnc_getDynamicSquadSize`, `A3E_fnc_Patrol`, `A3E_FNC_Chronos_Register`; execVMs `Scripts\Escape\*` (Functions, AIskills, EscapeSurprises, CreateSearchChopper); much legacy `drn_fnc_*` is behind `if(false)` (lines 251–441).
+- **Called by:** `[] spawn a3e_fnc_initServer` in `fn_bootstrapEscape.sqf` (line 36), server only. CfgFunctions flags are all 0 (line 127–131) — it is *not* auto-run by CfgFunctions; the bootstrap spawn is the sole caller.
+- **Processing (order):** guard `isServer`; load CommonLib; `parameterInit`; load Escape Functions/AIskills; resolve `A3E_Debug` (+3DEN preview AI cleanup); ACE revive EH + `ACE_MedicalServer`; load statistics; load unit classes + templates; publish flag path; create centers & set faction relations (war-torn branch); weather; compute + set date/time/time-multiplier + `hoursSkipped`; reset game-control vars; map enemy-skill param → min/max skill; compute search-chopper timers; gather exclusion zones; pick `A3E_StartPos` (retry until outside exclusions); `createStartpos`; init village markers; **wait for players**; spawn dynamic sites (COM/motor/ammo/mortar/crash); search-leader + player-detection; `initVillages`; (legacy DRN block disabled); start statistics; create search chopper (wait until done); init traps; spawn the prison-guard/backpack/alarm/escape-detection block; register Chronos jobs; spawn war-crime score decay loop.
+- **Theory of operation:** Everything world-authoritative is centralized so ordering and dependencies are explicit and single-owner. It deliberately blocks on player arrival (line 209) before spawning dynamic content, and blocks on the search-chopper script (line 452) before trap init, to sequence heavy spawns. The disabled `if(false)` DRN block is the previous-generation ambient-AI/traffic system, retained for reference while Chronos-driven equivalents (`AmbientPatrols`/`MilitaryTraffic`/`CivilianCommuters`/`RoadBlocks`) took over.
+- **Whys & questions:** Why register Chronos jobs at the very end (lines 679–683) rather than as each system inits — likely so all prerequisite globals exist first. Why keep the huge dead `if(false)` block instead of deleting it — migration safety net (candidate RD-cleanup). The war-crime decay loop (688–697) is a raw `while/sleep 60` marked "Move to chronos" (candidate RD).
+- **Unresolved issues:** Large dead code region 251–441 (RD — remove after port). `waitUntil {scriptDone _scriptHandle}` on the search-chopper execVM (452) serializes init behind chopper creation — intentional? (candidate Q). Duplicate assignment of `a3e_var_Escape_enemyMin/MaxSkill` (lines 161–164) is redundant (minor RD). Full per-section defect notes belong in [Server.md](Server.md).
+- **Reforger port notes:** This maps to a server-authoritative game-mode manager component (e.g. an `SCR_BaseGameMode` subclass) with an init state machine rather than one long spawned script. Faction relations → Reforger faction manager; date/weather → time-and-weather manager; dynamic sites → spawn-point/entity-spawner components; "wait for players" → player-connection events; Chronos scheduling → a tick/scheduler system component. Keep the explicit ordering; express it as init phases/events.
 
-### `Code/include/functions.hpp`  ·  _status: stub_
-- **Purpose:** _(to document — CfgFunctions declarations for the A3E / drn / ace tags)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — #included by description.ext)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/include/functions.hpp`  ·  _status: documented_
+- **Purpose:** The `CfgFunctions` manifest that registers every mission function with the engine so it can be called as `<tag>_fnc_<Name>`. It defines the namespace tags, the category → directory mapping, the preInit/postInit/recompile flags that make certain functions auto-run, and pulls in the revive submodule's function configs.
+- **Inputs:** Function `.sqf` files on disk under `Code/functions/<Category>/fn_<Name>.sqf` (path resolved by CfgFunctions convention from tag/category). `#include`s `..\Revive\functions\revive\revive.hpp` and `..\Revive\functions\HSC\hsc.hpp`. Guarded by `#ifndef A3E_EDITOR`.
+- **Outputs:** Compiled function table: tag `A3E` (categories Common, AI, Garrison, Debug, Intel, Helper, Server, Spawning, Zones, Templates, Chronos, Statistics, Searchleader), tag `drn` (category DRN — legacy), tags `ATR`/`ATHSC` (revive/hindsight-cam via file= + included hpp), tag `ace` (category ace: HandleUnconscious, ATCam, CaptiveHandle, GroundHandler). Auto-run flags: `Common::BootstrapEscape` postInit=1 (lines 9–10), `Chronos::Chronos_Init` postInit=1 (line 242); `Server::initServer` and `Common::InitLocalPlayer` explicitly 0.
+- **Calls:** None at parse time. Defines what the engine will `call compile` for each function; `#includes` the two Revive hpps.
+- **Called by:** `#include "include\functions.hpp"` in `description.ext` (line 93); parsed by the engine at mission load.
+- **Processing:** Declares nested `class CfgFunctions { class A3E { class <Category> { class <FnName> {…}; }; }; class drn {…}; class ATR {…}; class ATHSC {…}; class ace {…}; }`. Most function classes are empty `{}` (default: file `fn_<Name>.sqf` in the category dir, no auto-run). A few set flags: `BootstrapEscape` postInit=1 / recompile=0 (wrapped in `#ifndef A3E_EDITOR`), `Chronos_Init` postInit=1, `initServer` all-zero, `InitLocalPlayer` postInit=0. Revive/HSC use `file = "Revive\functions\revive"` + `#include` of their hpps.
+- **Theory of operation:** CfgFunctions is Arma's standard function registry: it gives every script a stable call name, compiles them once at load, and provides preInit/postInit hooks so a couple of entry-point functions self-start without a manual call. Category classes mirror the `Code/functions/` directory tree (see CLAUDE.md), keeping the config discoverable. The `A3E_EDITOR` guard lets an editor/dev build skip auto-run and recompile behavior.
+- **Whys & questions:** Only `BootstrapEscape` and `Chronos_Init` auto-run — everything else is chained from bootstrap, keeping a single controlled boot path. `Searchleader` (config casing) vs. the `SearchLeader` directory/naming — casing is engine-insensitive (README RD-008), style noise only. Commented-out classes (`SearchBuilding`, `initPatrolZone`, `activate/deactivatePatrolZone`, `unit_debug_marker`) are disabled/legacy.
+- **Unresolved issues:** Several declared classes are commented out (dead registrations) — cosmetic (candidate RD). The `ATR`/`ATHSC` includes depend on the Revive git submodule being present (`git submodule update --init`, per CLAUDE.md) — a missing submodule breaks the config parse (candidate RD / setup gotcha).
+- **Reforger port notes:** Enfusion has no CfgFunctions; "functions" are class methods on components/managers, resolved by static typing, not a name table. preInit/postInit auto-run → component lifecycle callbacks (`OnPostInit`, `EOnInit`). The revive `#include` submodule pattern → a dedicated revive component/mod dependency. Category-per-directory organization can carry over as script class folders, but the registration mechanism disappears.
 
-### `Code/include/params.hpp`  ·  _status: stub_
-- **Purpose:** _(to document — mission parameters exposed in-game and as CBA settings)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — #included by description.ext)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/include/params.hpp`  ·  _status: documented_
+- **Purpose:** Declares the `Params` class — the mission's in-lobby parameter screen — grouped into labeled sections (Difficulty, Environment, Gameplay, Statistics, DLC, 3rd-party, Debug). Each param becomes a lobby dropdown and (via `XEH_preInit.sqf`) a CBA setting.
+- **Inputs:** None (pure config). Consumed by the engine (lobby UI) and by `XEH_preInit.sqf` reading `missionConfigFile >> "Params"`.
+- **Outputs:** The `Params` config tree. Each class carries `title`, `values[]`, `texts[]`, `default`, and optionally `livechanges` (1 = applies without restart), `code` (callback, e.g. `A3E_Param_TimeMultiplier`'s `setTimeMultiplier`), `tooltip`. Selected values surface as `A3E_Param_<Name>` globals (resolved by `parameterInit`/CBA) read across the mission.
+- **Calls:** None. `A3E_Param_TimeMultiplier` embeds a `code` string (`if(isserver) then {setTimeMultiplier _this;};`) that CBA `compile`s.
+- **Called by:** `#include "include\params.hpp"` in `description.ext` (line 92); parsed by the engine; iterated by `XEH_preInit.sqf`.
+- **Processing:** Sequence of `class A3E_Param_*` entries. `A3E_Param_Loadparams` (param save/load, remapped to the `A3E_UseCBASettings` checkbox). `A3E_Param_Spacer1..7` are section headers (single-value, treated as spacers). Difficulty: EnemySkill, EnemyFrequency (deprecated), EnemyGroupSize, EnemySpawnDistance, VillageSpawnCount, SearchChopper. Environment: TimeOfDay, TimeMultiplier, Weather(Overcast/Fog/Wind/Rain), Grass. Gameplay: UseIntel, IntelChance, RevealMarkers, VehicleLock, Artillery, War_Torn, ReviveView, ExtractionSelection, Waffelbox, NoNightvision. Statistics: SendStatistics. DLC: Apex/Helis/Marksmen/Laws/Tanks/Contact (Jets commented out). 3rd-party: Magrepack. Debug: Debug.
+- **Theory of operation:** A single declarative source of truth for tunable mission settings, rendered by the engine as the pre-game parameter screen and mirrored into CBA settings for admin persistence. `default`s encode the intended baseline (e.g. EnemyGroupSize `-2` = players 1:1; TimeOfDay 8 = 08:00; most weather `-1` = weighted-random). `livechanges` marks which can change mid-mission.
+- **Whys & questions:** Spacer classes (single value, empty text) are a UI trick to render section headers in a flat param list. `EnemyFrequency` is explicitly "(depreciated)" but still read by `initServer` — kept for the disabled DRN block and compatibility (candidate Q — is it still meaningfully used?). Some params (War_Torn) are also nil-guarded in `initServer`, implying they may be absent in some builds.
+- **Unresolved issues:** Deprecated-but-live `EnemyFrequency` (candidate RD/Q). Jets DLC param commented out while others remain (cosmetic). The lobby-params vs. CBA-settings precedence question (see `XEH_preInit`) applies here too (candidate Q).
+- **Reforger port notes:** No lobby parameter screen in Enfusion. These become world/game-mode config attributes or a settings component with typed fields, edited in the World Editor or a server config file. `livechanges` → replicated settings that can update at runtime; `code` callbacks → attribute change handlers. DLC toggles are Arma-specific and largely irrelevant to Reforger's content model.
 
-### `Code/include/defines.hpp`  ·  _status: stub_
-- **Purpose:** _(to document — preprocessor #defines, including BUILD = `{* COMMIT *}`)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — #included across config/description)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/include/defines.hpp`  ·  _status: documented_
+- **Purpose:** Central preprocessor `#define` header: the compile-time build-identity tokens (`{* … *}` placeholders the compiler substitutes) and the numeric control-style constants used by `RscTitles`/dialog configs.
+- **Inputs:** Compile-time substitution tokens filled by `EscapeCompiler.exe`: `{* VERSION *}`, `{* MISSION_FULL *}`, `{* ISLANDNAME *}`, `{* MOD *}`, `{* RELEASE *}`, `{* COMMIT *}` (git hash). No runtime inputs.
+- **Outputs:** Macros: `VERSION`, `MISSIONNAME`, `MISSIONNAMEFULL`, `MOD`, `ISLAND`, `RELEASE`, `BUILD` (= `{* COMMIT *}`, per CLAUDE.md); UI control-style constants `ST_LEFT/RIGHT/CENTER/MULTI/PICTURE/TEXT_BG/LINE/KEEP_ASPECT_RATIO`, `CT_STRUCTURED_TEXT` (13), `LB_MULTI` (0x20). `GAMETYPE` define is commented out.
+- **Calls:** None (macro definitions only).
+- **Called by:** `#include "include\defines.hpp"` at the top of `description.ext` (line 1) and `XEH_preInit.sqf` (line 1); its macros are consumed by `description.ext` (metadata + `Escape*` build-identity props + `RscTitles` styles).
+- **Processing:** Straight list of `#define`s; no logic. The `{* … *}` tokens are literal strings until the C# compiler rewrites them per build.
+- **Theory of operation:** Isolating build identity and UI constants in one header lets one source tree be stamped into many per-island/per-mod PBOs with correct version/commit metadata, and lets dialog configs use readable names instead of magic numbers. `BUILD = {* COMMIT *}` is how the running mission reports the exact source commit (used in `EscapeBuild`).
+- **Whys & questions:** `ST_KEEP_ASPECT_RATIO` is defined as a string `"0x30 + 0x800"` rather than a numeric literal — works where the engine evaluates the expression but is unusual (candidate RD/Q). The commented `GAMETYPE` define hints at Vietnam-CDLC gametype handling done elsewhere (see `Header.gameType` note in `description.ext`).
+- **Unresolved issues:** If a build is produced without running the compiler (e.g. opened raw in the editor), the `{* … *}` tokens remain literal and `BUILD`/version metadata are garbage — depends entirely on the build pipeline (candidate RD, documented dependency on `EscapeCompiler.exe`).
+- **Reforger port notes:** Enfusion uses `#define`/`#ifdef` in Enforce Script and config, so simple macro constants translate. Build/version stamping → addon/mod metadata (`addon.gproj`, config version fields) or a generated config resource; git-commit injection would be a build-script step. UI style constants → Enfusion widget layout properties (different enums entirely).
 
-### `Code/config.sqf`  ·  _status: stub_
-- **Purpose:** _(to document — runtime config variables: a3e_var_* search/patrol/debug/artillery/etc.)_
-- **Inputs:** _(to document)_
-- **Outputs:** _(to document)_
-- **Calls:** _(to document)_
-- **Called by:** _(to document — compiled by fn_bootstrapEscape)_
-- **Processing:** _(to document)_
-- **Theory of operation:** _(to document)_
-- **Whys & questions:** _(to document)_
-- **Unresolved issues:** _(to document)_
-- **Reforger port notes:** _(to document)_
+### `Code/config.sqf`  ·  _status: documented_
+- **Purpose:** Runtime tuning config: sets the `a3e_var_*` (and a few `missionNamespace`) globals that parameterize the search-leader, patrol/investigation, artillery, spawn-distance, roadblock, and crash-site systems. Compiled early so these defaults exist before any gameplay function runs.
+- **Inputs:** None (assignments only). Some values are placeholders filled later at runtime (e.g. `a3e_var_artillery_units = []` is populated by the mortar-site templates).
+- **Outputs:** Globals: SearchLeader (`a3e_var_knownPositionHelperObject` = `"Land_HelipadEmpty_F"`, `a3e_var_knownPositionMinDistance` = 100); patrols (`a3e_var_maxSearchRange` 1000, `a3e_var_investigationChance` 60); debug (`a3e_debug_overwrite` false, `a3e_debug_artillery` false, `A3E_SystemLog` true); artillery (`a3e_var_artillery_units` [], time threshold 120, cooldown 600, rounds 6, dispersion 80, chance 10, chance-cooldown 60, fleeing distance 400); spawn distances (`MinSpawnDistance` 1500 / `MaxSpawnDistance` 2000); roadblocks (`DebugRoadblocks` false, min/max spawn distance 1500/2000, `MinRoadblockDistance` 750, `MaxNumberOfRoadblocks` 5); crash sites (`CrashSiteCountMax` 3).
+- **Calls:** None. Uses plain assignment and `missionNamespace setVariable` for the spawn/roadblock/crashsite group.
+- **Called by:** `call compile preprocessFileLineNumbers "config.sqf"` in `fn_bootstrapEscape.sqf` (line 3), postInit, on every machine.
+- **Processing:** Top-to-bottom variable assignments grouped by comment (SearchLeader, Patrols, Debug, Artillery, Default mission values, Roadblocks, Crashsites). No branching. Mixes direct global assignment (`a3e_var_*`) with `missionNamespace setVariable` for the spawn-distance/roadblock/crash-site values.
+- **Theory of operation:** Separates hand-tunable magic numbers from logic so designers can adjust behavior without touching function bodies. Loaded at the very start of postInit (before `initServer`) so downstream systems can read the values, and re-readable/overridable at runtime (e.g. `a3e_debug_overwrite` gates debug in `initServer` line 16).
+- **Whys & questions:** Two storage styles coexist — bare globals (`a3e_var_*`) vs. `missionNamespace setVariable` — with no functional difference at mission namespace; the `setVariable` group reads like a later addition (candidate RD, consistency). Several commented-out lines (`a3e_debug_*`, the pre-filled `a3e_var_artillery_units`) show removed debug/testing config. `a3e_var_artillery_units = []` being "filled by Mortar Site" is a documented cross-file dependency.
+- **Unresolved issues:** Mixed global vs. `setVariable` conventions (RD-consistency). Naming inconsistency between `a3e_var_*` / `a3e_debug_*` / `A3E_SystemLog` / bareword `MinSpawnDistance` capitalization (style, RD-008-adjacent). No namespacing on `MinSpawnDistance`/`CrashSiteCountMax` etc. risks collision (minor candidate RD).
+- **Reforger port notes:** These constants become configurable attributes on the relevant Reforger components (search/AI manager, artillery component, spawner, roadblock manager) or entries in a scenario config resource, rather than loose global variables. The "populated later" pattern (`artillery_units`) maps to a component collecting spawned mortar entities into a list at runtime. Prefer typed, namespaced config fields to avoid the loose-global collision risk.
 
 ## Revision History
 
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton (10-field file stubs, no analysis) |
+| 2026-07-02 | Claude | Documented all entries |

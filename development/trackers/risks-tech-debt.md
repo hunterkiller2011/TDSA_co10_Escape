@@ -128,6 +128,31 @@ error/retry handling) — may silently no-op on headless servers (see Q-016). `P
 legacy host, is NOT gated by the `A3E_Param_SendStatistics` opt-in, and injects an unescaped `serverName` into a
 URL. `Save`/`Parse` statistics couple to a positional-tuple record schema with no shared definition. _(Sprint 4.)_
 
+## RD-021 — Shipped dev/insecure mission config
+**Severity:** medium · **Status:** open
+`Code/description.ext` ships with `enableDebugConsole = 1` (`:40`), `allowFunctionsRecompile = 1` (`:41`),
+`CfgRemoteExec.Functions mode = 2` (whitelist ignored, `:104`), and an `allowedHTMLLoadURIs` list that
+includes a dev endpoint `http://localhost:5093/api/session*` (`:215`) plus plain-HTTP stat endpoints. Harden
+(disable debug console/recompile, mode 1 + explicit whitelist, drop the dev/cleartext URIs) for public builds. _(Sprint 5.)_
+
+## RD-022 — `initServer` dead code & intra-file duplication
+**Severity:** medium · **Status:** open
+`fn_initServer.sqf` contains a large dead `if(false) then {…}` legacy DRN block (`:251-441`), a duplicated
+crash-site loop (also in `fn_CreateCrashSites`), a duplicate `a3e_var_Escape_enemyMin/MaxSkill` assignment
+(`:161-164`), and a war-crime decay loop marked "move to Chronos" (`:688-697`). Prune before/during the port. _(Sprint 5.)_
+
+## RD-023 — Extraction & site-placement duplication
+**Severity:** medium · **Status:** open
+`RunExtraction`/`RunExtractionHeli`/`RunExtractionBoat`/`RunExtractionCar` are near-duplicate runners (collapse
+into one parameterized runner; ties to RD-015 and BUG-016). `createAmmoDepots`/`createMortarSites` share an
+identical quadrant/clearance placement loop — dedup. _(Sprint 5.)_
+
+## RD-024 — Build-pipeline & submodule coupling
+**Severity:** low · **Status:** open
+`include/functions.hpp` `#include`s the ATR/ATHSC revive configs, so a missing Revive submodule breaks config
+parse; `include/defines.hpp` relies on `EscapeCompiler.exe` substituting `{* … *}` tokens (incl. `BUILD`), so an
+uncompiled build ships garbage version/build metadata. Both matter when standing up the Reforger build. _(Sprint 5.)_
+
 ---
 
 _Format for new entries:_
@@ -146,3 +171,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added RD-010…013 from code-reference Sprint 2 (Common) |
 | 2026-07-01 | Claude | Added RD-014…016 from code-reference Sprint 3 (AI) |
 | 2026-07-01 | Claude | Added RD-017…020 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
+| 2026-07-02 | Claude | Added RD-021…024 from code-reference Sprint 5 (Server/init) |

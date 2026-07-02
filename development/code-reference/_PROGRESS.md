@@ -21,7 +21,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | 2 | Common | 35 | **done** |
 | 3 | AI | 32 | **done** |
 | 4 | Spawning, SearchLeader, Statistics | 36 | **done** |
-| 5 | Server, _init-and-includes | 38 | pending |
+| 5 | Server, _init-and-includes | 38 | **done** |
 | 6 | DRN | 20 | pending |
 | 7 | Templates (dedupe variants) | 45 | pending |
 
@@ -41,8 +41,8 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | Spawning | [Spawning.md](Spawning.md) | 20 | done |
 | SearchLeader | [SearchLeader.md](SearchLeader.md) | 8 | done |
 | Statistics | [Statistics.md](Statistics.md) | 8 | done |
-| Server | [Server.md](Server.md) | 30 | pending |
-| _init & includes | [_init-and-includes.md](_init-and-includes.md) | 8 | pending |
+| Server | [Server.md](Server.md) | 30 | done |
+| _init & includes | [_init-and-includes.md](_init-and-includes.md) | 8 | done |
 | DRN | [DRN.md](DRN.md) | 20 | pending |
 | Templates | [Templates.md](Templates.md) | 45 | pending |
 
@@ -97,6 +97,8 @@ concurrent edits.
 
 **Sprint 4 intake (Spawning/SearchLeader/Statistics)** — folded into `bugs-app.md` BUG-019…023, `risks-tech-debt.md` RD-017…020, `open-questions.md` Q-015…017; privacy facts → `docs/security-privacy.md`. Confirmed by hand: `onCivilianGroupSpawn` `_group` typo (EHs don't register), `populateVillageZone` `_zoneArea` undefined, `onPlayerSpotted` 0-byte empty, `StartSession` duplicate `server=`.
 
+**Sprint 5 intake (Server/_init)** — folded into `bugs-app.md` BUG-024…026, `risks-tech-debt.md` RD-021…024, `open-questions.md` Q-018…020; config-hardening facts → `docs/security-privacy.md`. Confirmed by hand: `description.ext` dev config (debug console / recompile / remoteExec mode 2 / localhost URI), `initServer.sqf:251` dead `if(false)` block; BUG-016 re-confirmed from the Server side.
+
 ## Revision History
 
 | Date | Author | Change |
@@ -105,4 +107,5 @@ concurrent edits.
 | 2026-07-01 | Claude | Sprint 2 (Common, 35) documented; findings folded into trackers |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; findings folded into trackers |
 | 2026-07-01 | Claude | Sprint 4 (Spawning/SearchLeader/Statistics, 36) documented; findings folded; security-privacy updated |
+| 2026-07-02 | Claude | Sprint 5 (Server/_init, 38) documented; findings folded; security-privacy hardening added |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |
