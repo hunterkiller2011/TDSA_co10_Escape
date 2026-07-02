@@ -118,6 +118,10 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
 - **Status:** open · **Severity:** low · **candidate — verify**
 - **Repro / context:** `fn_createMortarSites.sqf` — `A3E_MortarSiteCountMin/Max *= A3E_Param_Artillery` mutates the *globals* rather than locals; safe only because called once, but a second call would compound (latent re-entrancy).
 
+## BUG-027 — DRN live-function bug candidates
+- **Status:** open · **Severity:** low-medium · **candidate — verify**
+- **Repro / context:** In DRN functions that are still live (the search/insertion path): `fn_SearchGroup.sqf` uses `grpNull` as the default for a **marker-name** parameter (type mismatch); `fn_MotorizedSearchGroup.sqf` issues a duplicate `addWaypoint`; `fn_InsertionTruck.sqf` does an unconditional `player sideChat` (null on dedicated servers; UI/log spam). The aquatic/ambient DRN bug candidates are moot — those functions are dead (see RD-025).
+
 ---
 
 _Format for new entries:_
@@ -139,3 +143,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added BUG-014…018 from code-reference Sprint 3 (AI) |
 | 2026-07-01 | Claude | Added BUG-019…023 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
 | 2026-07-02 | Claude | Added BUG-024…026 from code-reference Sprint 5 (Server) |
+| 2026-07-02 | Claude | Added BUG-027 from code-reference Sprint 6 (DRN) |

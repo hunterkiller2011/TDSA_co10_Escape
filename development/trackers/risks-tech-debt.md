@@ -113,6 +113,9 @@ Determine which is authoritative before porting. See Q-015. _(Sprint 4.)_
 near-duplicate of the live `A3E_fnc_initZone` — the old `patrolZones` framework appears dead. It carries a
 latent `_x`-for-`_shape` typo (`:31-34`), harmless only because it is unreachable. Confirm
 `activatePatrolZone`/`deactivatePatrolZone` are likewise unused, then remove the old framework.
+**Update (Sprint 6):** the DRN `MilitaryTraffic` spawns (`initServer:399/400`) are inside the dead `if(false)`
+block (`:251-441`), so they do **not** run — there is **no live traffic duplication**; the live traffic system
+is A3E `MilitaryTraffic` via Chronos (`:681`).
 
 ## RD-019 — SearchLeader dead/legacy residue
 **Severity:** low · **Status:** open
@@ -153,6 +156,20 @@ identical quadrant/clearance placement loop — dedup. _(Sprint 5.)_
 parse; `include/defines.hpp` relies on `EscapeCompiler.exe` substituting `{* … *}` tokens (incl. `BUILD`), so an
 uncompiled build ships garbage version/build metadata. Both matter when standing up the Reforger build. _(Sprint 5.)_
 
+## RD-025 — DRN legacy library is largely dead / superseded
+**Severity:** medium · **Status:** open
+`Code/functions/DRN/` is mostly not live — a major prune opportunity for the port:
+- **Disabled** (inside the dead `if(false)` block at `initServer:251-441`): `AmbientInfantry`, `InitAquaticPatrols`
+  and its trigger-wired `PopulateAquaticPatrol`/`DepopulateAquaticPatrol`, and `MilitaryTraffic`.
+- **Superseded** (no callers; A3E equivalent exists): `PopulateVillage`/`DepopulateVillage`
+  (→ `Spawning/fn_populateVillageZone`); the `InitGuardedLocations` → `PopulateLocation`/`DepopulateLocation`/
+  `GarrisonUnits` chain (→ `Spawning/fn_populateLocationZone`); `MoveInfantryGroup` (→ `AI/fn_Patrol`);
+  `MoveVehicle`; `MonitorEmptyGroups`; `InitAquaticPatrolMarkers`.
+- **Still live** (verify): `InitVillageMarkers` (`:205`), and the search-chopper/insertion path
+  (`SearchChopper`/`SearchGroup`/`MotorizedSearchGroup`/`InsertionTruck`) via external `Scripts\Escape\*`.
+Also hard-depends on an external CommonLib (`drn_fnc_CL_*`) and uses magic-index soldier schemas that differ
+from the A3E ones. _(Sprint 6.)_
+
 ---
 
 _Format for new entries:_
@@ -172,3 +189,4 @@ _Format for new entries:_
 | 2026-07-01 | Claude | Added RD-014…016 from code-reference Sprint 3 (AI) |
 | 2026-07-01 | Claude | Added RD-017…020 from code-reference Sprint 4 (Spawning/SearchLeader/Statistics) |
 | 2026-07-02 | Claude | Added RD-021…024 from code-reference Sprint 5 (Server/init) |
+| 2026-07-02 | Claude | Added RD-025 + corrected RD-018 (DRN traffic dead) from Sprint 6 (DRN) |

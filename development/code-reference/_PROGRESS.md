@@ -22,7 +22,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | 3 | AI | 32 | **done** |
 | 4 | Spawning, SearchLeader, Statistics | 36 | **done** |
 | 5 | Server, _init-and-includes | 38 | **done** |
-| 6 | DRN | 20 | pending |
+| 6 | DRN | 20 | **done** |
 | 7 | Templates (dedupe variants) | 45 | pending |
 
 ## Per-category status
@@ -43,7 +43,7 @@ _Last updated: 2026-06-30 (local)_ · _Status: active_
 | Statistics | [Statistics.md](Statistics.md) | 8 | done |
 | Server | [Server.md](Server.md) | 30 | done |
 | _init & includes | [_init-and-includes.md](_init-and-includes.md) | 8 | done |
-| DRN | [DRN.md](DRN.md) | 20 | pending |
+| DRN | [DRN.md](DRN.md) | 20 | done |
 | Templates | [Templates.md](Templates.md) | 45 | pending |
 
 ## Concern intake (consolidated into trackers centrally)
@@ -99,6 +99,30 @@ concurrent edits.
 
 **Sprint 5 intake (Server/_init)** — folded into `bugs-app.md` BUG-024…026, `risks-tech-debt.md` RD-021…024, `open-questions.md` Q-018…020; config-hardening facts → `docs/security-privacy.md`. Confirmed by hand: `description.ext` dev config (debug console / recompile / remoteExec mode 2 / localhost URI), `initServer.sqf:251` dead `if(false)` block; BUG-016 re-confirmed from the Server side.
 
+**Sprint 6 intake (DRN)** — folded into `bugs-app.md` BUG-027, `risks-tech-debt.md` RD-025 (+ RD-018 corrected). **Correction:** the DRN ambient/traffic/aquatic calls (`AmbientInfantry`, `InitAquaticPatrols`, `Populate`/`DepopulateAquaticPatrol`, `MilitaryTraffic`) are inside the dead `if(false)` block (`initServer:251-441`) → **dead, not live** as the sub-agent first reported; DRN.md carries a correction note.
+
+_Raw agent notes (DRN = legacy third-party ambient-AI library; much is superseded by A3E `Spawning/`/`Zones/`):_
+
+- BUG-candidate (`PopulateAquaticPatrol`): loop `for [{_i=0},{_i<=_groups},...]` is inclusive, spawning `_groups+1` boats; and `_groups` derives from `random 1` (a float 0..1) via `InitAquaticPatrols:48` — fractional/off-by-one group counts.
+- BUG-candidate (`GarrisonUnits`): `_rbpos = (floor random _numberofBpos)+1` can exceed the valid `buildingPos` index range (off-by-one), snapping soldiers to `[0,0,0]`. Also ignores its `_soldiertype` arg (hardcodes `a3e_arr_Escape_InfantryTypes`, line 4) and has no isServer guard; creates one one-man group per garrisoned soldier (group bloat).
+- BUG-candidate (`PopulateLocation`): passes undefined `_soldiertype`/`_markername` (lowercase) to `drn_fnc_GarrisonUnits` (line 78) — the local is `_markerName`; these args are nil/leaked (RD-008 casing + genuine nil-arg smell). GarrisonUnits ignores `_soldiertype` so partially masked.
+- BUG-candidate (`MoveVehicle`): `_destinationSegment` is only set on the random-destination path but dereferenced unconditionally at line 47 when a `_firstDestinationPos` is supplied → nil-var error on that branch. (Function is also dead — see below.)
+- BUG-candidate (`InsertionTruck`): unconditional `player sideChat "Deleting dead unit"` (line 162) spams all clients regardless of `_debug`; dead-unit handling only `setPos`es, never deletes.
+- BUG-candidate (`MotorizedSearchGroup`): duplicate `addWaypoint` (line 434-435) — harmless but wasteful.
+- BUG-candidate (`SearchGroup`): `param [1,grpNull]` uses a group-null default for a marker-NAME (string) param (line 21) — type mismatch (masked because all 5 callers pass a name).
+- BUG-candidate (`InitAquaticPatrols` / `InitAquaticPatrolMarkers`): the marker-init caller is **commented out** at `initServer.sqf:206`, but `InitAquaticPatrols` (live at :285) creates triggers referencing `a3e_aquaticPatrolMarkerN` markers that may never be created → possible silent no-op / bad trigger.
+- RD-018 duplication (DRN vs A3E): **`MilitaryTraffic`** runs LIVE from DRN (`initServer:399/400`) while the A3E-native `Spawning/fn_MilitaryTraffic.sqf` is ALSO Chronos-registered (`initServer:681`) — two traffic systems concurrently; confirm intent. `MoveVehicle` duplicates the inline `drn_fnc_MilitaryTraffic_MoveVehicle`. `AmbientInfantry` overlaps `Spawning/fn_AmbientPatrols.sqf`.
+- Dead / superseded DRN functions (no `fnc_` callers in `_xref.md`; A3E equivalent named):
+  - `DepopulateVillage` + `PopulateVillage` → superseded by `Spawning/fn_populateVillageZone.sqf` (+ `fn_initVillages`, `Zones/`).
+  - `InitGuardedLocations` (+ its `PopulateLocation`/`DepopulateLocation`/`GarrisonUnits` chain) → no live caller; A3E has `Spawning/fn_populateLocationZone.sqf`. Whole guarded-location path appears retired (verify — may be invoked only from an un-indexed external `Scripts/DRN/...`).
+  - `MoveInfantryGroup` → only a commented-out caller; replaced by `A3E_fnc_Patrol` (used in `AmbientInfantry:160`).
+  - `MoveVehicle` → dead + duplicated (see above).
+  - `MonitorEmptyGroups` → dead diagnostic tool, never wired.
+  - `InitAquaticPatrolMarkers` → caller commented out (`initServer:206`); aquatic-patrol feature may be disabled.
+- Still-LIVE DRN functions (keep in mind for port): `AmbientInfantry` (initServer:347), `InitAquaticPatrols` (:285) + `Populate/DepopulateAquaticPatrol` (trigger-wired), `MilitaryTraffic` (:399/400), `InitVillageMarkers` (:205, via `A3E_fnc_` alias), `InsertionTruck` (CreateReinforcementTruck), `MotorizedSearchGroup` (CreateMotorizedSearchGroup), `SearchChopper` (CreateSearchChopper/EscapeSurprises), `SearchGroup` (5 callers — core foot-search primitive).
+- RD/tech-debt (whole library): hard external dependency on legacy DRN CommonLib (`drn_fnc_CL_*` + `a3e_var_commonLibInitialized` nag-loops) across ~10 functions; pervasive unused `private` declarations; magic-index soldier-record schemas that DIFFER between `PopulateVillage` and `PopulateLocation` (data-format drift); `A3E_*`/`a3e_*`/`drn_*` casing/namespace straddle (RD-008), esp. `InitVillageMarkers` registered/called under both `drn` and `A3E_fnc_`.
+- Q (`AmbientInfantry`): hardcoded 6:5 Ind:Opfor faction weighting (line 46) carries the author's own `//WHY!?!?!?!?!` comment — intent unknown; `_minUnitsInGroup`/`_maxUnitsInGroup` params are dead (squad size from `getDynamicSquadSize`).
+
 ## Revision History
 
 | Date | Author | Change |
@@ -108,4 +132,6 @@ concurrent edits.
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; findings folded into trackers |
 | 2026-07-01 | Claude | Sprint 4 (Spawning/SearchLeader/Statistics, 36) documented; findings folded; security-privacy updated |
 | 2026-07-02 | Claude | Sprint 5 (Server/_init, 38) documented; findings folded; security-privacy hardening added |
+| 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; corrected DRN live/dead (if(false) block); findings folded |
 | 2026-07-01 | Claude | Sprint 3 (AI, 32) documented; concerns listed for tracker intake |
+| 2026-07-02 | Claude | Sprint 6 (DRN, 20) documented; concerns listed for tracker intake |
