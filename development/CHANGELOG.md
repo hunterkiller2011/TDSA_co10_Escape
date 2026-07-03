@@ -5,6 +5,23 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
 
 ## 2026-07-01 – 2026-07-02
 
+- Started the **integration** phase (linking the per-file code-reference into system-level views): added
+  three architecture docs — [lifecycle-and-timeline.md](docs/architecture/lifecycle-and-timeline.md)
+  (boot→escape→end sequence across server/client/JIP, P0–P6, sync latches), 
+  [state-and-data-flow.md](docs/architecture/state-and-data-flow.md) (load-bearing globals as
+  producer→consumer maps), and [runtime-loops.md](docs/architecture/runtime-loops.md) (the recurring
+  control loops L1–L9). Surfaced RD-035 (dead `civilianReporting` win-gate) and locked in the BUG-031
+  spawn/escape race in-sequence.
+- Traced the **extraction subsystem** end-to-end
+  ([subsystem-extraction.md](docs/architecture/subsystem-extraction.md): locate → hack → select zone →
+  signal → evac run → win/lose). Surfaced BUG-034 (extraction pools duplicate on repeated hacks),
+  BUG-035 (unbounded board-wait can stall evac), and the dead DRN extraction path (→ RD-031). Confirmed
+  evac markers originate in per-island `Missions/<Island>/mission.sqm` (handoff to the procedural-gen trace).
+- Traced the **procedural world-generation** data path
+  ([subsystem-world-generation.md](docs/architecture/subsystem-world-generation.md): island + mod data →
+  placement/exclusion → the two build mechanisms (fn-composition vs Iso data-templates) → zone-population
+  garrisoning). Documented the island/mod data schema, confirmed RD-028/Q-015/BUG-021 in the build path,
+  and surfaced RD-036 (unbounded placement loops can hang world-gen).
 - Completed the legacy Arma 3 **code-reference** — all 246 per-function/file entries across 16 docs documented
   (Sprints 1–7, one commit per sprint; Templates done family-by-family via part-files + a merge script).
 - Logged review findings to the trackers: `BUG-001…029`, `RD-006…029`, `Q-009…021`; filled

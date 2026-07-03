@@ -1,5 +1,5 @@
 # Bugs — Application
-_Last updated: 2026-06-30 (local)_ · _Status: skeleton_
+_Last updated: 2026-07-02 (local)_ · _Status: active_
 
 > Bugs in the mission/application code. **ID scheme:** `BUG-NNN` (stable, never reused). Bugs in the
 > test scripts/infra go in [bugs-tests.md](bugs-tests.md) instead.
@@ -187,6 +187,28 @@ _Last updated: 2026-06-30 (local)_ · _Status: skeleton_
   uses `time + _timeInSek * (4 - _enemyFrequency)`, unlike every other branch's `time + _timeInSek * (0.5 + (4-freq)/4)`.
   At `_enemyFrequency == 4` (max) this is `time + 0` → the surprise re-fires immediately (spam).
 
+## BUG-034 — Extraction zone pools duplicate on repeated com-center hacks (candidate)
+- **Status:** open · **Severity:** low · **candidate — verify**
+- **Repro / context:** `Code/functions/Server/fn_SelectExtractionZone.sqf`. Marker *discovery* is `isNil`-cached
+  (`:25-45`), but the pool-*assembly* appends (`:54-64`, `A3E_ExtractionPositions append …`) are **not** guarded and
+  run on every call. Each successful hack (one per com-center) re-appends the `air`/`land`/`sea`/`old` positions, so
+  `A3E_ExtractionPositions` accumulates duplicate zone records across a multi-comcenter mission.
+- **Notes:** Partly masked by the per-record `used` flag (`set[3,true]`) + the clear filter, but it biases random
+  selection toward duplicated zones. Fix: build the assembled list once (guard it) or de-dup. Surfaced by the
+  integration extraction trace ([subsystem-extraction.md](../docs/architecture/subsystem-extraction.md) Stage 3).
+
+## BUG-035 — Extraction board-wait loop is unbounded (can stall evac) (candidate)
+- **Status:** open · **Severity:** medium · **candidate — verify**
+- **Repro / context:** `Code/functions/Server/fn_RunExtractionHeli.sqf:106` (and the Boat/Car/foot variants at the
+  analogous line): `while { <not all players in the transports> } do { sleep 1 }` blocks until **every**
+  `A3E_fnc_GetPlayers` unit boards. If a survivor can never board (dead body still counted, stuck geometry, or a
+  disconnected-but-counted player), the loop never completes → `State` never becomes `"Evac"`, `Exfil_Complete` is
+  never set, and neither `MissionComplete` nor `MissionFailed_LeftBehind` fires → extraction stalls silently.
+- **Notes:** The `LeftBehind` path only handles *boarded-then-departed*, not *never-boarded*. Total-wipe is still
+  covered by the `missionFlow` all-unconscious feeder, but not one stuck survivor. Fix: bound the board-wait with a
+  timeout (then depart + `LeftBehind`). Verify `GetPlayers` semantics for dead/DC'd players. Surfaced by the
+  integration extraction trace ([subsystem-extraction.md](../docs/architecture/subsystem-extraction.md) Stage 6).
+
 ---
 
 _Format for new entries:_
@@ -211,6 +233,7 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added BUG-027 from code-reference Sprint 6 (DRN) |
 | 2026-07-02 | Claude | Added BUG-028…029 from code-reference Sprint 7 (Templates) |
 | 2026-07-02 | Claude | Added reality-check note; reframed BUG-028 as likely false positive (→ TS-001) |
+| 2026-07-02 | Claude | Added BUG-034/035 (extraction pool-dup / unbounded board-wait) from integration extraction trace |
 | 2026-07-02 | Claude | Traced prison escape (3 triggers) → BUG-028 RESOLVED (false positive); added BUG-030 (guards patrol into prison) |
 | 2026-07-02 | Claude | Added BUG-031 (spawn/init race can start escape via the weapon trigger) |
 | 2026-07-02 | Claude | Added BUG-032 (Functions.sqf no-op counter, confirmed), BUG-033 (EscapeSurprises re-fire) from Scripts review |

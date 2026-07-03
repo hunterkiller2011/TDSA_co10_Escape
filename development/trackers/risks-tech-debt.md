@@ -1,5 +1,5 @@
 # Risks & Tech Debt
-_Last updated: 2026-06-30 (local)_ · _Status: active_
+_Last updated: 2026-07-02 (local)_ · _Status: active_
 
 > Known risks and technical debt for the conversion. **ID scheme:** `RD-NNN` (stable, never reused).
 
@@ -216,7 +216,11 @@ Dead/superseded scripts under `Code/Scripts/`: `Escape/AIskills.sqf` (loaded at 
 confirms RD-019; superseded by the `Code/functions/SearchLeader/` category), several `drn_fnc_CL_*` in
 `DRN/CommonLib/CommonLib.sqf` (`InitParams`/`GetMarkerWithinRange`/`GetClosestMarker`/`RotatePosition`/`AddScore*`
 unused; the garbage collector's body is fully commented out — inert), and possibly-shadowed helpers in
-`Escape/Functions.sqf`. Prune during the port. _(Scripts review.)_
+`Escape/Functions.sqf`. Also the **DRN-era extraction path** in `Escape/Functions.sqf:150-166`
+(`drn_fnc_Escape_CreateExtractionPointServer` + the `drn_EscapeExtractionEventArgs`
+`addPublicVariableEventHandler`) is dead — nothing outside that block sets the PV or calls the function
+(grep-confirmed); superseded by `A3E_fnc_SelectExtractionZone` → `A3E_fnc_CreateExtractionPoint` (see
+[subsystem-extraction.md](../docs/architecture/subsystem-extraction.md)). Prune during the port. _(Scripts review; extraction trace.)_
 
 ## RD-032 — Reinforcement system (`EscapeSurprises`/`*Chopper`) fragility & leaks
 **Severity:** medium · **Status:** open
@@ -238,6 +242,29 @@ UAV/terminal classname lists (silently no-ops on other modsets); the Reforger UA
 In `Code/templates/*.sqf`: the `["probability",N]` attribute on optional gun slots (rb_bis_rb2/rb4, rb_gm_rb3) is
 **never read** by `isoTemplateRestore`/`RoadBlocks`, so those slots always emit; and the `ammoboxes` slot type is
 fully unused on both producer and consumer sides. Minor schema debt to drop/implement in the port. _(Iso-templates review.)_
+
+## RD-035 — Vestigial `civilianReporting` clean-win gate (superseded by war-crime score)
+**Severity:** low · **Status:** open
+`a3e_var_Escape_SearchLeader_civilianReporting` gates the **end2 clean-win** trigger
+(`fn_missionFlow.sqf:17`: `... && !a3e_var_Escape_SearchLeader_civilianReporting && ...`), but it is
+**only ever assigned `false` in live code** (`missionFlow:4`); the single `= true` site is the deprecated
+`Code/Scripts/Escape/SearchLeader.sqf:30` (RD-019, not loaded). So the gate term is **always true** — the
+implied "shot civilians ⇒ no clean win" mechanic is inert. That penalty is now carried by the **war-crime
+score** path (`A3E_Warcrime_Score` → end4 tainted win at >1000; see
+[state-and-data-flow.md §2/§5](../docs/architecture/state-and-data-flow.md#2-mission-outcome-chain)).
+`fn_handleScore.sqf:3` only checks the var's *presence* (`!isNil`), not its value, so it doesn't revive it.
+**Port decision:** delete the dead gate, or re-wire civilian-reporting to actually set it. Verify in-game
+first. _(Integration data-flow review.)_
+
+## RD-036 — World-gen placement loops have no bounded fallback
+**Severity:** low-medium · **Status:** open
+The procedural placement retries are unbounded: `A3E_fnc_findFlatArea` is called with
+`_max_num_search_areas = 0` and its "give up" branch is effectively dead (the `while {count _final_pos == 0}`
+only exits when a flat spot is found), and the start-position exclusion retry
+(`fn_initServer.sqf:191`, `while {A3E_StartPos inArea exclusionZone} …`) likewise loops until success. On a
+pathological map (all-water, or fully covered by exclusion zones) world generation can spin forever with no
+timeout/fallback, hanging the mission at load. Add a bounded retry count + a sensible fallback position for
+the port. _(World-generation trace; see [subsystem-world-generation.md](../docs/architecture/subsystem-world-generation.md) Stage 3.)_
 
 ---
 
@@ -262,3 +289,5 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added RD-026…029 from code-reference Sprint 7 (Templates) |
 | 2026-07-02 | Claude | Added RD-030 (dead/unfinished Factions/ faction-abstraction system) |
 | 2026-07-02 | Claude | Added RD-031…034 from Scripts/ + Iso-templates review |
+| 2026-07-02 | Claude | Added RD-035 (dead civilianReporting win-gate) from integration data-flow review |
+| 2026-07-02 | Claude | Added RD-036 (unbounded world-gen placement loops) from world-generation trace |

@@ -1,11 +1,18 @@
 # Architecture — Application
 _Last updated: 2026-07-02 (local)_ · _Status: active (partial)_
 
-> How the mission is built and runs (components, data model, control flow). _(skeleton — to be filled)_
+> How the mission is built and runs (components, data model, control flow). _(skeleton — being filled)_
 >
-> The legacy Arma 3 implementation is mapped in detail under
+> The legacy Arma 3 implementation is mapped per-file under
 > [../../code-reference/](../../code-reference/README.md); this doc is the higher-level picture and,
 > over time, the Reforger target architecture.
+>
+> **Integration docs** (how the per-file pieces link together):
+> - [lifecycle-and-timeline.md](lifecycle-and-timeline.md) — the end-to-end boot→escape→end sequence (timelines).
+> - [state-and-data-flow.md](state-and-data-flow.md) — the load-bearing globals as producer→consumer maps (data paths).
+> - [runtime-loops.md](runtime-loops.md) — the recurring control loops (Chronos, SearchLeader, mission-flow).
+> - [subsystem-extraction.md](subsystem-extraction.md) — deep trace: com-center locate → hack → evac → win/lose.
+> - [subsystem-world-generation.md](subsystem-world-generation.md) — deep trace: island/mod data → placement → build → garrison.
 
 ## Components
 
@@ -43,7 +50,10 @@ interaction with these triggers is covered by BUG-030 / BUG-031.
 
 ### Other flow
 
-_(to write — initialization → procedural generation → runtime loops)_
+The full boot→generation→placement→escape→steady-state→end sequence (across the server / client / JIP
+lanes, with the synchronization latches and ordering hazards) is documented in
+**[lifecycle-and-timeline.md](lifecycle-and-timeline.md)**. The prison escape/alarm state machine above is
+phase **P4** of that timeline.
 
 ## Reforger target architecture
 
@@ -55,3 +65,4 @@ _(to write — TBD; see [open-questions Q-001/Q-002/Q-004/Q-006](../../trackers/
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton |
 | 2026-07-02 | Claude | Documented the prison escape/alarm state machine (Control flow) |
+| 2026-07-02 | Claude | Linked the integration docs; filled "Other flow" → lifecycle-and-timeline.md (P4 = escape state machine) |

@@ -1,5 +1,5 @@
 # co10_Escape → Reforger — Documentation Index
-_Last updated: 2026-06-30 (local)_ · _Status: skeleton_
+_Last updated: 2026-07-02 (local)_ · _Status: active_
 
 > Start here. This is the map of all planning & engineering documentation for porting the Arma 3
 > mission **co10_Escape** to **Arma Reforger** (Enfusion / Enforce Script).
@@ -33,7 +33,13 @@ asked to build/port code, work in the production tree — do not turn these plan
 - [docs/development-plan.md](docs/development-plan.md) — goals, constraints, proposed phases.
 - [docs/glossary.md](docs/glossary.md) — shared domain terms (Arma 3 + Enfusion).
 - [docs/security-privacy.md](docs/security-privacy.md) — data handling, secrets, the statistics API.
-- [docs/architecture/application.md](docs/architecture/application.md) — how the app/mission works.
+- [docs/architecture/application.md](docs/architecture/application.md) — how the app/mission works (overview).
+- **Integration docs** (how the per-file code links together):
+  - [docs/architecture/lifecycle-and-timeline.md](docs/architecture/lifecycle-and-timeline.md) — end-to-end boot→escape→end sequence (timelines).
+  - [docs/architecture/state-and-data-flow.md](docs/architecture/state-and-data-flow.md) — load-bearing globals as producer→consumer maps (data paths).
+  - [docs/architecture/runtime-loops.md](docs/architecture/runtime-loops.md) — the recurring control loops (Chronos, SearchLeader, mission-flow).
+  - [docs/architecture/subsystem-extraction.md](docs/architecture/subsystem-extraction.md) — deep subsystem trace: com-center locate → hack → evac → win/lose.
+  - [docs/architecture/subsystem-world-generation.md](docs/architecture/subsystem-world-generation.md) — deep subsystem trace: island/mod data → placement → build → garrison.
 - [docs/architecture/testing.md](docs/architecture/testing.md) — test strategy & infrastructure.
 - [docs/architecture/operations.md](docs/architecture/operations.md) — build, deploy, environments, runbooks.
 - [docs/project-template.md](docs/project-template.md) — the reusable blueprint these docs follow (project-agnostic).
@@ -68,3 +74,4 @@ decisions/bugs/questions in the appropriate tracker.
 | Date | Author | Change |
 |------|--------|--------|
 | 2026-06-30 | Peter | Initial skeleton |
+| 2026-07-02 | Claude | Added the integration architecture docs (lifecycle-and-timeline, state-and-data-flow, runtime-loops) to the map |
