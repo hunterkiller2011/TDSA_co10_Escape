@@ -1,7 +1,23 @@
 # Changelog
-_Last updated: 2026-07-02 (local)_ · _Status: active_
+_Last updated: 2026-07-03 (local)_ · _Status: active_
 
 > Notable project-level changes, newest first.
+
+## 2026-07-03
+
+- **Bug re-evaluation (with user, one at a time):** reassessed the static-review findings BUG-001…019
+  against how the mission actually plays. All were downgraded — none were the medium/high mission-breakers
+  first flagged: dead code (BUG-002/003/010), latent/harmless for current callers (BUG-005/006/007/009/011),
+  ACE-only/dormant for the ATR config (BUG-008/012½/013), perf/debug-only (BUG-001/004), and two
+  high→low corrections where a working path exists (BUG-014 broken-duplicate, BUG-019 works-by-call-inheritance
+  — civilian reporting is live via the `KnowsAboutChanged` handler).
+- **New, player-facing findings surfaced during the re-eval:** BUG-036 (garrisons over-stuff one
+  building/room), BUG-037 (AI keep engaging downed players → tank collateral + area denial, impedes revives),
+  BUG-038 (finicky `cursorObject` hack/heal prompt), and RD-037 (the DRN garbage collector is disabled but
+  still fed → long-session unit leak; root-causes the confirmed perf decline alongside RD-026).
+- Confirmed SQF string `switch`/`==` is case-sensitive (in-repo `toLower` proves it); documented the existing
+  debug tooling (live log streaming + `A3E_DebugLogFilter` + `startDebugView`) as a testing aid; clarified the
+  250 m extraction clearance is by-design.
 
 ## 2026-07-01 – 2026-07-02
 

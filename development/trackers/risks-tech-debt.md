@@ -264,7 +264,23 @@ only exits when a flat spot is found), and the start-position exclusion retry
 (`fn_initServer.sqf:191`, `while {A3E_StartPos inArea exclusionZone} …`) likewise loops until success. On a
 pathological map (all-water, or fully covered by exclusion zones) world generation can spin forever with no
 timeout/fallback, hanging the mission at load. Add a bounded retry count + a sensible fallback position for
-the port. _(World-generation trace; see [subsystem-world-generation.md](../docs/architecture/subsystem-world-generation.md) Stage 3.)_
+the port. **Not yet triggered in practice** (user 2026-07-03): the group's map rotation is pre-tested — incl.
+water-surrounded islands — and always generates, since any map with *some* flat land resolves quickly; the risk
+is for untested/pathological maps. Pre-testing is the current mitigation. See also BUG-011 (the same function's
+inverted return-flag) — fix both together. _(World-generation trace; see [subsystem-world-generation.md](../docs/architecture/subsystem-world-generation.md) Stage 3.)_
+
+## RD-037 — Garbage collector disabled but still fed (long-session unit leak)
+**Severity:** medium · **Status:** open
+`drn_fnc_CL_RunGarbageCollector` (removes empty groups + units queued via `drn_fnc_CL_AddUnitsToGarbageCollector`,
+`Code/Scripts/DRN/CommonLib/CommonLib.sqf:444`) is **commented out** at `fn_initServer.sqf:244`, so it never runs —
+yet spent search/reinforcement groups are still **queued** into it at runtime (`fn_SearchGroup.sqf:169`,
+`fn_MotorizedSearchGroup.sqf:213,233` call `AddUnitsToGarbageCollector`). Those units are therefore **never
+collected**; they persist for the whole session and `a3e_var_CL_GarbageCollectorUnits` grows unbounded. A direct
+contributor to the **confirmed gradual long-session performance decline** (user-reported 2026-07-03), alongside
+**RD-026** (spawned composition objects never despawned) and the minor **BUG-007** (idle zone triggers never
+deleted). Note the decline is **not** carcasses — capped by `description.ext` (`corpseLimit=30`/`wreckLimit=10`).
+**Port:** implement a real periodic cleanup — the traps system `fn_updateTraps.sqf` (bounded list + distance-based
+despawn) is the good in-repo pattern — or remove the dead GC queueing. _(Perf-decline investigation.)_
 
 ---
 
@@ -291,3 +307,4 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added RD-031…034 from Scripts/ + Iso-templates review |
 | 2026-07-02 | Claude | Added RD-035 (dead civilianReporting win-gate) from integration data-flow review |
 | 2026-07-02 | Claude | Added RD-036 (unbounded world-gen placement loops) from world-generation trace |
+| 2026-07-03 | Claude | Added RD-037 (garbage collector disabled but still fed) from long-session perf-decline investigation |

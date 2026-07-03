@@ -180,6 +180,24 @@ already reveals some markers and can be extended:
   BUG-031 deterministically. → TS-007.
 - **DH-7 — Leak counters:** log active-trigger + grouped-entity counts over time. → BUG-007 (trigger leak), RD-026 (template objects never despawned).
 
+### Debug tooling that already exists (use now)
+
+Two under-used tools are already in the mission (confirmed 2026-07-03):
+
+- **Live log streaming** — `a3e_fnc_log` tags every message with categories and routes them to **systemChat + the
+  `.rpt`**. `A3E_DebugLogFilter` has **dual semantics** (`fn_logMessage.sqf:19-21`): with `A3E_Debug = true` it is a
+  **mute-list** (everything streams except listed categories); with `A3E_Debug = false` it is a **watch-list**
+  (nothing streams except listed categories — the useful mode for focusing on one subsystem without full-debug spam).
+  Categories: `Zones`, `Spawning`, `Serialization`, `MilitaryTraffic`, `CivilianCommuters`, `Garisson` (sic — misspelled
+  at `populateLocationZone:33`), `ERROR`, `Debugging`, `SearchLeader`, `Extraction`.
+  - Verify **BUG-036**: `A3E_Debug=false; A3E_DebugLogFilter=["Spawning"]` → compare `Found N enterable Buildings… in
+    Zone X` vs `Creating group with N units`.
+  - Verify **BUG-005/006/007**: `A3E_DebugLogFilter=["Serialization"]` → `Group serialized and deleted` / `Group deserialized`.
+- **`startDebugView`** — a dialog listing the last 25 stored messages (`A3E_DebugLog`, capped 100). It is **unbound**
+  (call `[] call a3e_fnc_startDebugView` from the debug console), a **one-shot snapshot** (no auto-refresh), and its
+  category-filter arg is BUG-004 (unused by the sole caller). Worth wiring to a keybind + adding auto-refresh as a
+  future testing aid.
+
 ## Bugs better confirmed by inspection than by a scenario
 
 Code-confirmed and either dead or not observable in normal play — verify by reading the fix (a one-line `diag_log` at the
@@ -208,3 +226,4 @@ _Format for new entries:_
 | 2026-07-02 | Claude | TS-001 updated (BUG-028 resolved via static trace); added TS-006 (guards enter prison) |
 | 2026-07-02 | Claude | Added TS-007 (spawn sequence must not start escape) |
 | 2026-07-02 | Claude | Added TS-008…013 (from tracked bugs), debug-hooks section (DH-1…7), and code-only bug list |
+| 2026-07-03 | Claude | Documented existing debug tooling (live log streaming + A3E_DebugLogFilter dual semantics + startDebugView) as a usable testing aid |
