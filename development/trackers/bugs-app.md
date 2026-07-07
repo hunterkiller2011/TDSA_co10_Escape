@@ -115,21 +115,29 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
 - **Re-eval (2026-07-03, user-corrected):** civilian reporting is **NOT dead**. It works via a **separate, correct** handler — `onCivilianGroupSpawn:8-68` registers a `KnowsAboutChanged` EH whose body correctly `params ["_grp","_player",…]` from the EH args and does the radio-report → `recordSighting`. Players **do** see civilians radio in positions (user-confirmed), once `A3E_Warcrime_Score > A3E_Warcrime_Score_CivilianFear` (1000). So `onEnemyDetected` is a **broken duplicate** — it exits early and does nothing, but has **zero impact** (KnowsAboutChanged already reports). (For enemy groups the handler is log-only — `side _grp != civilian`.) Revises the earlier "high / civilian reporting broken."
 - **Disposition:** low — **delete** `onEnemyDetected` + its `EnemyDetected` registration as a redundant broken copy (or fix `_player`→`_newTarget` if both paths are genuinely wanted).
 
-## BUG-015 — `SeekShelter` is empty but is called
-- **Status:** open · **Severity:** medium · **confirmed**
-- **Repro / context:** `Code/functions/AI/fn_SeekShelter.sqf` is 0 bytes, yet `Code/functions/Zones/fn_DeserializeZoneGroups.sqf:91` does `[_grp] call A3E_FNC_SeekShelter`. Groups deserialized into a "shelter" state receive no orders (silent no-op). Implement or reroute.
+## BUG-015 — `SeekShelter` is empty but is called — dead/unfinished feature
+- **Status:** open · **Severity:** low · **dead branch — never reached**
+- **Repro / context:** `Code/functions/AI/fn_SeekShelter.sqf` is 0 bytes; `Code/functions/Zones/fn_DeserializeZoneGroups.sqf:89-91` has `case "SHELTER": [_grp] call A3E_FNC_SeekShelter`.
+- **Re-eval (2026-07-03):** grep-confirmed **nothing ever sets a group's task state to "SHELTER"** — the only `"SHELTER"` reference in `Code/` is the deserialize `case` itself; `SetTaskState` is never called with it. So the case never matches and the empty function is **never called** → **no player impact**. It's an **unfinished/abandoned** "take cover / seek shelter" behavior (stubbed, given a case, never wired). Civilian fleeing already exists via a different path (`onCivilianSpawn` FiredNear → hide in building).
+- **Disposition:** low — delete the empty function + dead case, or implement SHELTER in the port if wanted (likely redundant with GARRISONED/OCCUPY + civilian-flee).
 
 ## BUG-016 — Extraction-boat runner spawns the car behavior
-- **Status:** open · **Severity:** medium · **confirmed**
-- **Repro / context:** `Code/functions/Server/fn_RunExtractionBoat.sqf:41-42` spawns `A3E_fnc_ExtractionCar` (passing the boats), while `Code/functions/AI/fn_ExtractionBoat.sqf` has no callers (orphaned). Either the boat behavior was abandoned in favor of reusing the car state machine, or this is a wrong-function bug. Verify intent.
+- **Status:** open · **Severity:** low · **confirmed — functionally harmless (copy-paste artifact)**
+- **Repro / context:** `Code/functions/Server/fn_RunExtractionBoat.sqf:41-42` spawns `A3E_fnc_ExtractionCar` (passing the boats), leaving `Code/functions/AI/fn_ExtractionBoat.sqf` orphaned. Cloned from `RunExtractionCar` (log at `:51` says "fn_RunExtractionCar"; boats published as `A3E_EvacHeli1/2/3`).
+- **Re-eval (2026-07-03, user-confirmed):** boat evac **works** (boats arrive, wait, board, leave). The car/boat state machines are near-identical generic vehicle logic; `land "LAND"/"NONE"` is a no-op for boats *and* cars, and `fn_ExtractionBoat.sqf` even carries the same `isTouchingGround` check — nothing boat-specific is lost by the swap. Observed issues (boats colliding, beaching, driving back-and-forth near shore) are **generic AI pathing + boat evac-marker placement too close to shore** (per-island `mission.sqm` data), **not** the function swap.
+- **Disposition:** low — delete the orphaned `ExtractionBoat` (or wire it) as cleanup. Separately: boat evac-marker placement near shore is a **per-island data-quality** item (boats path poorly to shore-adjacent points) — worth a placement guideline for the port.
 
-## BUG-017 — `Stroll` markerless path leaves `_destinationPos` unset (candidate)
-- **Status:** open · **Severity:** medium · **candidate — verify**
-- **Repro / context:** `Code/functions/AI/fn_Stroll.sqf` — the no-marker branch calls `a3e_fnc_move` without first setting `_destinationPos` (unlike `fn_Patrol.sqf`), risking an undefined-variable use.
+## BUG-017 — `Stroll` markerless path leaves `_destinationPos` unset
+- **Status:** open · **Severity:** low · **latent/harmless — case unreachable + graceful default**
+- **Repro / context:** `Code/functions/AI/fn_Stroll.sqf` — `_destinationPos` is only assigned in the `_markerName != "noMarker"` block (`:28-37`); the markerless path falls through to `:39` `… call a3e_fnc_move` with `_destinationPos` still nil.
+- **Re-eval (2026-07-03):** the nil-destination case is **not reachable** — all callers supply a marker or a restored homeMarker: `Occupy` (marker), `populateVillageZone:66` (marker), Stroll's own oncomplete (marker), and `DeserializeZoneGroups:83` (no marker, but `a3e_homeMarker` is restored to the zone marker at deserialize `:71`, so the `:8-10` fallback resolves it). Even if hit, `a3e_fnc_move` defaults a nil position to `[0,0,0]` via `bis_fnc_param` (`_position = [_this,1,[0,0,0],[[]]]`) — group walks to the map corner rather than erroring. **No player impact.**
+- **Disposition:** low — set a fallback `_destinationPos` (e.g. random pos near the leader) in the markerless branch for robustness.
 
-## BUG-018 — `FireArtillery` fires one extra round; `CallCAS` always returns true (candidate)
-- **Status:** open · **Severity:** low · **candidate — verify**
-- **Repro / context:** `Code/functions/AI/fn_FireArtillery.sqf` — an inclusive `for … from 0 to _artilleryRounds` fires `_artilleryRounds+1` shells. `Code/functions/AI/fn_CallCAS.sqf` returns a hard-coded `true` regardless of outcome.
+## BUG-018 — `FireArtillery` fires one extra round; `CallCAS` always returns true
+- **Status:** open · **Severity:** low · **both real but negligible/inert**
+- **Repro / context:** `Code/functions/AI/fn_FireArtillery.sqf:11` — inclusive `for "_i" from 0 to _artilleryRounds` fires `_artilleryRounds+1` shells. `Code/functions/AI/fn_CallCAS.sqf:33` returns a hard-coded `true`.
+- **Re-eval (2026-07-03):** the artillery off-by-one is **trivial** (one extra shell; artillery is already lethal). CallCAS's always-true is **inert** — its only consumer is commented out: `fn_SearchLeader.sqf:90-92` sets `A3E_var_LastArtilleryStrike` **unconditionally** (`//if(_strikesuccess) then {` disabled), so `_strikesuccess` is a dead value and the bogus return never matters; strike cadence is time-gated by that timestamp regardless. The escalation works (80% artillery / 20% CAS when contact held ≥ threshold; both also make nearby OPFOR/IND groups flee the impact).
+- **Disposition:** low — fix the off-by-one for correctness (`to _artilleryRounds-1` / `< _artilleryRounds`); CallCAS's return is moot unless the `if(_strikesuccess)` gate is restored. Both dormant if `A3E_Param_Artillery = 0`. **User-confirmed active + frequent** (artillery enabled; "expect to be mortar'd soon" is a group refrain) — so the off-by-one fires often but remains imperceptible; SearchLeader escalation is definitely live (relevant to BUG-023).
 
 ## BUG-019 — `onCivilianGroupSpawn` attaches EHs to `_group` — works by call-inheritance (fragile)
 - **Status:** open · **Severity:** low · **false positive for breakage; real fragility (code-smell)**
@@ -137,38 +145,57 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
 - **Re-eval (2026-07-03, user-corrected):** civilian reporting demonstrably **works** (user sees civilians radio-in), so `_group` is **not** nil at registration. It's the SQF **call-inherits-caller-locals** case: both callers — `fn_spawnCivilianStroller.sqf:22` and `fn_SpawnCivilianVehicle.sqf:28` — do `[_group] call A3E_fnc_onCivilianGroupSpawn` with a local literally named `_group` and use **`call`** (not `spawn`), so `_group` is inherited into this function and the EHs register on the correct group. **False positive** for broken behavior. Real issue = **fragility**: works only because every caller happens to name the var `_group` and use `call` — a `spawn`, or a `_grp`-named caller, would silently break EH registration.
 - **Disposition:** low code-smell — use `_grp` (the declared param) in the `addEventHandler` calls for robustness. The `KnowsAboutChanged` handler here is the **live** civilian-informant path (see BUG-014).
 
-## BUG-020 — `populateVillageZone` large-village branch never fires + debug spam
-- **Status:** open · **Severity:** medium · **confirmed**
-- **Repro / context:** `Code/functions/Spawning/fn_populateVillageZone.sqf:8` tests `_zoneArea`, but the value read is `_area` (`:5`); `_zoneArea` is undefined so the ">5000 ⇒ add Opfor" branch never runs. Also leftover `systemchat str _patrolCount` (`:37`) broadcasts to all clients.
+## BUG-020 — `populateVillageZone`: large-village Opfor branch dead + (server-local) systemchat
+- **Status:** open · **Severity:** medium · **confirmed (code + playtest — villages are Independent-only)**
+- **Repro / context:** `Code/functions/Spawning/fn_populateVillageZone.sqf`:
+  - **:8** tests `_zoneArea`, but the zone area is `_area` (`:5`). `_zoneArea` is undefined → the `>5000 ⇒ add A3E_VAR_Side_Opfor to the sides pool` branch never fires (and `nil > 5000` throws a per-village script error; execution continues, villages still populate). **User-confirmed: all villages are Independent-only** — the intended Opfor mix-in for large villages is entirely absent.
+  - **:37** `systemchat str _patrolCount`. **Correction (2026-07-03):** `systemchat` is **local** and this function runs **server-side**, so it shows only on the server (nothing on a dedicated server; a listen-host would see it) — **not** broadcast to clients (user confirmed no stray numbers). My earlier "all clients" was wrong; it's harmless server log noise.
+- **Re-eval (2026-07-03):** villages still populate (Ind patrols + civilians scaled by `A3E_Param_VillageSpawnCount` + zone size), but every village is **mono-faction Independent** — a real difficulty/variety loss (esp. where Independent = militia vs Opfor = main military).
+- **Disposition:** medium — fix `_zoneArea`→`_area` (restores large-village Opfor + kills the error); delete the `systemchat` line.
 
 ## BUG-021 — `populateLocationZone` passes undefined `_x` to getBuildingsInMarker
-- **Status:** open · **Severity:** medium · **confirmed** (call chain traced)
+- **Status:** open · **Severity:** low · **confirmed nil `_x`, but the result is dead computation — no player impact**
 - **Repro / context:** `Code/functions/Spawning/fn_populateLocationZone.sqf:32` — `[_x] call a3e_fnc_getBuildingsInMarker`. It is dispatched dynamically: `Zones/fn_initLocationZone.sqf:4` registers `"A3E_FNC_populateLocationZone"` as the zone `oninit`, invoked at `Zones/fn_activateZone.sqf:20` (`[_zoneIndex] call (getVariable _onInit)`), itself fired by the zone trigger (`Zones/fn_initZone.sqf:56`). **No frame in that chain is inside a `forEach`** — checked specifically because SQF `call` would otherwise inherit an enclosing loop's `_x` — so `_x` is genuinely nil. The intended variable is the zone marker `_marker` (`:4`). Also computes an unused `_guardCount` (`:36`).
 - **Notes:** `findSpawnPosBuilding.sqf:156` (`_site`/`_newGrp`) is a separate candidate — not re-verified against caller scope. The `initPatrolZone.sqf:31-34` `_x`-for-`_shape` case originally grouped here is **dead code** (function has no callers; superseded by `initZone`, which does the marker setup correctly) — moved to RD-018.
+- **Re-eval (2026-07-03):** nil `_x` confirmed, **but the result is dead computation** — `_buildingsPositions` feeds only the log line (`:33`, "Found 0 enterable Buildings") and the **unused** `_guardCount` (`:36`); the actual garrison (`:48-60`) uses `_patrolCount` + `_marker` and self-selects buildings via `GuardBuilding`→`getRndBuildingWithPositions`. So **no functional/player effect** — just a misleading log. It's a **vestige of the abandoned area-wide garrison distribution** (same family as BUG-002 / BUG-036). **Downgraded to low.** Fix `_x`→`_marker` for an accurate log; the real fix is wiring area-wide distribution (→ BUG-036 / BUG-002).
 
 ## BUG-022 — `StartSession` duplicates the `server=` query param
-- **Status:** open · **Severity:** low · **confirmed**
+- **Status:** open · **Severity:** low · **confirmed — harmless (backend stats, same value twice)**
 - **Repro / context:** `Code/functions/Statistics/fn_StartSession.sqf:30` and `:32` both append `&server=<name>` to the stats URL (copy-paste).
+- **Re-eval (2026-07-03):** both use the **same** `_servername`, so the API receives `server=` twice with identical values and reads one — **no functional or player effect** (external `co10esc.anzp.de` stats backend). Gated on `A3E_Param_SendStatistics == 1` (dormant if stats off). Related **Q-016**: the GET fires via `htmlLoad` on a hidden `RscHTML` control, which may not work on a **dedicated** server (no UI) — the whole stats system (and this bug) could be silently inert there.
+- **Disposition:** low/cosmetic — delete the duplicate `:32`. See also the [self-hosted stats-backend proposal](../docs/stats-backend.md) (redirect this API to an own DB) — roll this cleanup into that edit.
 
-## BUG-023 — `ReportToHQ` mixes boolean and count in one condition (candidate)
-- **Status:** open · **Severity:** low · **candidate — verify**
-- **Repro / context:** `Code/functions/SearchLeader/fn_ReportToHQ.sqf:29` — an `&&` combines `(_grp knowsAbout …) >= threshold` with `{alive _x} count (units _grp) > 0`; verify precedence yields the intended "knows enough AND has living units".
+## BUG-023 — `ReportToHQ` mixes boolean and count in one condition — FALSE POSITIVE
+- **Status:** closed — false positive (precedence is correct) · **Severity:** n/a
+- **Repro / context:** `Code/functions/SearchLeader/fn_ReportToHQ.sqf:29` — `if((_grp knowsAbout (vehicle _x)) >= _knowledgeThreshold && {alive _x} count (units _grp)>0)`.
+- **Re-eval (2026-07-03):** precedence is **correct**. In SQF, binary commands (`count`) and comparisons (`>=`,`>`) both bind **tighter than `&&`**, so this parses as `((knowsAbout) >= threshold) && ((count of living units) > 0)` — exactly "group knows the player well enough **AND** has ≥1 living unit." The `_x` in `{alive _x}` is the `count` iterator (each unit), correctly shadowing the outer player `_x`. **Not a bug.** `ReportToHQ` is the live enemy→HQ reporting path (feeds `recordSighting` → the artillery/CAS escalation, user-confirmed).
+- **Notes:** it is the **third** near-identical copy of the radio-report routine (`onEnemyDetected` [broken dup, BUG-014], `onCivilianGroupSpawn` KnowsAboutChanged [civilian], `ReportToHQ` [enemy]) → **RD-038**.
 
-## BUG-024 — `createMotorPools` publishes inconsistent position-list element shape (candidate)
-- **Status:** open · **Severity:** medium · **candidate — verify**
-- **Repro / context:** `Code/functions/Server/fn_createMotorPools.sqf` — `a3e_var_Escape_MotorPoolPositions` is filled with plain positions (`:75/86`) then overwritten with `[pos,dir]` marker tuples (`:89`); the published value ends up tuples. Any consumer expecting plain positions (e.g. `CheckCampDistance`) would misread element shape.
+## BUG-024 — `createMotorPools` publishes inconsistent position-list element shape
+- **Status:** open · **Severity:** low · **latent/harmless — only consumer unreachable; line 86 is dead**
+- **Repro / context:** `Code/functions/Server/fn_createMotorPools.sqf` — `:86` `pushBack (_x select 0)` (plain positions), but `:89` **overwrites** the whole variable with `_mpPosition` (`[pos,dir]` tuples). So the published value is tuples and `:86` is dead (discarded).
+- **Re-eval (2026-07-03):** the **only** consumer is `CheckCampDistance.sqf:29` (`case "motorpool"`), which is **never called** — its sole caller (`SelectExtractionZone`) passes `"all"` (see BUG-009). So the tuple-vs-position inconsistency never bites → **no player impact.**
+- **Disposition:** low — remove the dead `:86`; standardize the element shape if the `"motorpool"` CheckCampDistance case is ever wired.
 
-## BUG-025 — Site-placement early-out returns before building (candidate)
-- **Status:** open · **Severity:** medium · **candidate — verify**
-- **Repro / context:** `fn_createAmmoDepots.sqf` / `fn_createMortarSites.sqf` — the placement loop has `if(_i>100) exitWith {_positions}` which returns *before* the template/zone is built, so 100 failed placement attempts silently yield a partial map (no depot/site) with no error.
+## BUG-025 — Site-placement early-out returns before building
+- **Status:** open · **Severity:** low · **latent — failsafe never reached (empirically confirmed)**
+- **Repro / context:** `fn_createAmmoDepots.sqf:81-83` / `fn_createMortarSites.sqf` — `if(_i>100) exitWith {_positions}` inside the placement `while` exits the **whole function** (SQF `exitWith` leaves the enclosing scope, not just the loop), **before** the build loop (`:87-95`). So hitting the 100-iteration cap builds **zero** depots/sites — not even the ones already placed.
+- **Re-eval (2026-07-03, user-confirmed):** **never triggered in practice** — hundreds-to-~1000 plays across dozens of maps, always had ammo depots / mortars / objectives. The loop reaches `A3E_AmmoDepotCount` in far fewer than 100 iterations because island configs keep the count within what the map fits. So the misdesigned failsafe is **unreachable** on the real rotation → **no player impact.** Downgraded medium→low.
+- **Disposition:** low — port robustness: build the partial `_positions` (`exitWith`→`break`, or move the build after the loop) + log a warning, so a future over-set count degrades gracefully instead of silently losing an objective.
 
-## BUG-026 — `createMortarSites` mutates global count vars in place (candidate)
-- **Status:** open · **Severity:** low · **candidate — verify**
-- **Repro / context:** `fn_createMortarSites.sqf` — `A3E_MortarSiteCountMin/Max *= A3E_Param_Artillery` mutates the *globals* rather than locals; safe only because called once, but a second call would compound (latent re-entrancy).
+## BUG-026 — `createMortarSites` mutates global count vars in place
+- **Status:** open · **Severity:** low · **latent re-entrancy — called once, no impact**
+- **Repro / context:** `fn_createMortarSites.sqf:19-20` — `A3E_MortarSiteCountMin/Max = A3E_MortarSiteCountMin/Max * A3E_Param_Artillery` mutates the **globals** in place (should be locals).
+- **Re-eval (2026-07-03):** called **once** (initServer), so the globals scale by `A3E_Param_Artillery` exactly once → `_mortarSiteCount` correct → **no compounding, no player impact**. A second call would re-scale (compound), since the isNil defaults (`:13-18`) don't reset already-set globals — a **latent re-entrancy** hazard only. Aside: `A3E_Param_Artillery = 0` → count 0 → no mortar sites (artillery-off correctly yields no mortars; user runs it enabled → mortars spawn). Shares the BUG-025 early-out.
+- **Disposition:** low — use locals (`private _min = A3E_MortarSiteCountMin * A3E_Param_Artillery`) for the port.
 
 ## BUG-027 — DRN live-function bug candidates
-- **Status:** open · **Severity:** low-medium · **candidate — verify**
-- **Repro / context:** In DRN functions that are still live (the search/insertion path): `fn_SearchGroup.sqf` uses `grpNull` as the default for a **marker-name** parameter (type mismatch); `fn_MotorizedSearchGroup.sqf` issues a duplicate `addWaypoint`; `fn_InsertionTruck.sqf` does an unconditional `player sideChat` (null on dedicated servers; UI/log spam). The aquatic/ambient DRN bug candidates are moot — those functions are dead (see RD-025).
+- **Status:** open · **Severity:** low · **all three latent/harmless or server-invisible**
+- **Repro / context + re-eval (2026-07-03):**
+  - `fn_SearchGroup.sqf:21` `_searchAreaMarkerName = param[1,grpNull]` — a marker-**name** (String) param defaulting to **grpNull** (a Group), copy-pasted from param 0. **Latent** type mismatch — never hit: callers always pass a real marker name (search groups work). Fix default to `""`.
+  - `fn_MotorizedSearchGroup.sqf:434-435` — two identical `addWaypoint [_enemyPos, 0]` → a harmless **redundant** waypoint (group still just goes to the enemy pos). Remove the dup.
+  - `fn_InsertionTruck.sqf:94,162` `player sideChat` — `:94` is a guarded CommonLib-version-fail loop (CommonLib is bundled at the right version → never fires); `:162` "Deleting dead unit" is a debug line. Both run **server-side** → `player` null on a dedicated server → no-op/invisible (a listen-host would see `:162` spam). Delete/gate.
+- **Disposition:** low — the aquatic/ambient DRN candidates are moot (those functions are dead, RD-025). Cleanups for the port.
 
 ## BUG-028 — Building-as-gate prisons escape detection — RESOLVED (false positive)
 - **Status:** closed — false positive (traced) · **Severity:** n/a
@@ -251,6 +278,13 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
   covered by the `missionFlow` all-unconscious feeder, but not one stuck survivor. Fix: bound the board-wait with a
   timeout (then depart + `LeftBehind`). Verify `GetPlayers` semantics for dead/DC'd players. Surfaced by the
   integration extraction trace ([subsystem-extraction.md](../docs/architecture/subsystem-extraction.md) Stage 6).
+- **Re-eval (2026-07-03, user-corroborated):** beyond the hard-hang edge, this gate causes a **real, recurring
+  "slow to leave in a timely fashion"** across **all** evac types (heli/car/boat) — the user independently suspected
+  the player-loaded check. The gate requires **every** `A3E_fnc_GetPlayers` unit to be `in` an evac vehicle (polled
+  each 1 s), so a straggler, a downed/being-revived player, or a player struggling to board a **repositioning**
+  vehicle (the `Land`↔`WaitForPlayers` reposition) delays departure for everyone; the never-leaves hard-stall is the
+  extreme. **Fix:** bound with a timeout (depart with whoever's aboard) and/or gate only on **alive + conscious**
+  players and/or add a manual "ready to go" signal; hold the vehicle still while waiting. Bumps practical severity.
 
 ## BUG-036 — Garrison groups clump into one building/room (over-stuffing)
 - **Status:** open · **Severity:** low-medium (gameplay quality) · **confirmed (code + playtest)**
@@ -328,3 +362,10 @@ _Format for new entries:_
 | 2026-07-03 | Claude | Re-eval: BUG-011 latent/harmless (default limit works; folds into RD-036, not observed — maps pre-tested) |
 | 2026-07-03 | Claude | Re-eval: BUG-012 (Half 1 ACE-dormant; Half 2 DC terminal-lock low-med, trivial fix). Added BUG-038 (finicky cursorObject hack prompt, user-reported) |
 | 2026-07-03 | Claude | Re-eval (user-corrected): BUG-013 low (ACE-only/niche); BUG-014 high→low (broken duplicate — civilian reporting works via KnowsAboutChanged); BUG-019 high→low (false positive — works by call-inheritance) |
+| 2026-07-03 | Claude | Re-eval: BUG-015 dead/unfinished (SHELTER never set); BUG-016 low (harmless copy-paste; boat issues are AI/marker-placement); BUG-017 latent/harmless; corroborated BUG-035 (slow evac departures, all types) |
+| 2026-07-03 | Claude | Re-eval: BUG-018 low (artillery off-by-one trivial; CallCAS always-true is inert — the if(_strikesuccess) consumer is commented out) |
+| 2026-07-03 | Claude | Re-eval: BUG-020 (Opfor branch dead — villages all-Independent confirmed; corrected systemchat to server-local); BUG-021 med→low (nil _x but dead computation) |
+| 2026-07-03 | Claude | Re-eval: BUG-022 low/harmless (duplicate server= param, same value; backend stats only) |
+| 2026-07-03 | Claude | Re-eval: BUG-023 CLOSED false positive (precedence correct); added RD-038 (triplicated report logic). FR-001 + docs/stats-backend.md from BUG-022 follow-up |
+| 2026-07-03 | Claude | Re-eval: BUG-024 low/latent (dead line 86; consumer unreachable); BUG-025 med→low (failsafe never reached — ~1000 plays); BUG-026 low/latent (called-once global mutation) |
+| 2026-07-03 | Claude | Re-eval: BUG-027 low (all three latent/redundant/server-invisible DRN cleanups) |

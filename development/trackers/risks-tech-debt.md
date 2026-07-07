@@ -282,6 +282,14 @@ deleted). Note the decline is **not** carcasses — capped by `description.ext` 
 **Port:** implement a real periodic cleanup — the traps system `fn_updateTraps.sqf` (bounded list + distance-based
 despawn) is the good in-repo pattern — or remove the dead GC queueing. _(Perf-decline investigation.)_
 
+## RD-038 — Triplicated "radio report → recordSighting" logic
+**Severity:** low-medium · **Status:** open
+The sighting-report routine (pick an able-to-radio reporter, `say3D` radio sound + `setRandomLip`/listening
+animation, wait `A3E_var_ReportTime`, then `recordSighting`) is **copy-pasted three times**:
+`fn_ReportToHQ.sqf` (enemy→HQ, live), `fn_onCivilianGroupSpawn.sqf:8-68` (civilian `KnowsAboutChanged`, live),
+and `fn_onEnemyDetected.sqf` (a **broken** duplicate via the `_player` typo — BUG-014). Consolidate into one
+shared function for the port — fixes BUG-014 by construction and removes the drift risk. _(SearchLeader review 2026-07-03.)_
+
 ---
 
 _Format for new entries:_
@@ -308,3 +316,4 @@ _Format for new entries:_
 | 2026-07-02 | Claude | Added RD-035 (dead civilianReporting win-gate) from integration data-flow review |
 | 2026-07-02 | Claude | Added RD-036 (unbounded world-gen placement loops) from world-generation trace |
 | 2026-07-03 | Claude | Added RD-037 (garbage collector disabled but still fed) from long-session perf-decline investigation |
+| 2026-07-03 | Claude | Added RD-038 (triplicated radio-report logic) from BUG-023 SearchLeader review |

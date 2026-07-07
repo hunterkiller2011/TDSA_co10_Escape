@@ -33,6 +33,7 @@ asked to build/port code, work in the production tree — do not turn these plan
 - [docs/development-plan.md](docs/development-plan.md) — goals, constraints, proposed phases.
 - [docs/glossary.md](docs/glossary.md) — shared domain terms (Arma 3 + Enfusion).
 - [docs/security-privacy.md](docs/security-privacy.md) — data handling, secrets, the statistics API.
+- [docs/stats-backend.md](docs/stats-backend.md) — proposal: self-hosted mission-statistics backend (own DB) for the live mission + the port.
 - [docs/architecture/application.md](docs/architecture/application.md) — how the app/mission works (overview).
 - **Integration docs** (how the per-file code links together):
   - [docs/architecture/lifecycle-and-timeline.md](docs/architecture/lifecycle-and-timeline.md) — end-to-end boot→escape→end sequence (timelines).
