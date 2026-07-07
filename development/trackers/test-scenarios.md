@@ -160,6 +160,14 @@ whether a force-template flag should be added). Otherwise replay until the targe
 
 ---
 
+## TS-014 — Roadblock manned-slot alignment under rotation (BUG-029)
+- **Confirms/denies:** BUG-029. Pass = gunners/vehicles cover the road (aligned with the barriers); fail = they face off by ~the road heading.
+- **Config:** any world with roads at varied headings.
+- **Setup:** find/force roadblocks (spawn dynamically 1500-2000 m from players on roads; or pin a roadblock template via a debug hook). Compare one on a ~N-S road (rotation ≈ 0) vs an E-W road (rotation ≈ 90).
+- **Milestones:** at each roadblock, note the static-gunner / manned-vehicle facing vs (a) the road direction and (b) the barrier alignment.
+- **Expected (if bug):** on angled roads, manned slots face off by ~the road heading while barriers align to the road; on a ~heading-0 road they look correct (rotation ≈ 0 masks it).
+- **Status:** planned
+
 ## Testing aids — debug hooks worth adding
 
 Many scenarios are gated by RNG (which template/variant spawns, extraction type, when a search escalates). The existing

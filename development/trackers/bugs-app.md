@@ -207,12 +207,13 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
   the mission is **never softlocked**; the door poll only drives the *alarm* for those layouts. (Guard
   `knowsAbout > 2.5` sounds the alarm but does not start escape, `:641`.) Confirms the empirical evidence.
 
-## BUG-029 — Iso roadblock manned slots misaligned under rotation (candidate)
-- **Status:** open · **Severity:** medium · **candidate — verify**
-- **Repro / context:** `Templates/fn_isoTemplateRestore.sqf` applies `setDir (_dir + _rotation)` to created scenery but stores manned-slot `dir` **raw**; `Server/fn_RoadBlocks.sqf:68-72` then re-applies the raw `_dir` without adding `_rotation`, so spawned manned vehicles / static gunners are misaligned vs the rotated static composition whenever `_rotation ≠ 0`. Live roadblock path.
+## BUG-029 — Iso roadblock manned slots misaligned under rotation
+- **Status:** open · **Severity:** medium · **code-confirmed; in-game frequency needs playtest (→ TS-014)**
+- **Repro / context:** `Templates/fn_isoTemplateRestore.sqf` applies `setDir (_dir + _rotation)` to created scenery but stores manned-slot `dir` **raw** (rotated `_realPos`, un-rotated dir); `Server/fn_RoadBlocks.sqf:72/93-94` then spawns manned vehicles / static gunners with the raw `_dir` (no `+ _rotation`).
+- **Re-eval (2026-07-03):** the rotation is **the road heading** — `fn_RoadBlocks.sqf:32` `_dir = BIS_fnc_DirTo` along the road (`:36-38` flips 180° half the time), then `:46` passes it as `_rotation` to `isoTemplateRestore`. So `_rotation ≠ 0` on ~every roadblock ⇒ predicted **on ~every roadblock**, static gunners + manned vehicles sit at the correct (road-aligned) spots but face off by the road heading (don't cover the road; misaligned vs the barriers). **User tentatively recalls seeing it; needs a targeted playtest** to confirm every-time vs most-of-the-time. Fix: store `_dir + _rotation` for the deferred slots in `isoTemplateRestore`.
 
-## BUG-030 — Prison guards patrol into the prison (near-instant-failure risk)
-- **Status:** open · **Severity:** medium-high (gameplay) · **confirmed (code + playtest)**
+## BUG-030 — Prison guards patrol into the prison (robs the escape-planning phase)
+- **Status:** open · **Severity:** medium (gameplay) · **confirmed (code + playtest)**
 - **Repro / context:** Prison guards (3–8, `fn_initServer.sqf:460-580`) are given the patrol marker
   `drn_guardAreaMarker` — a **50×50 m ELLIPSE centered on `A3E_StartPos`, i.e. on the prison itself** (`:475-477`)
   — via `[_guardGroup,_marker] spawn A3E_fnc_Patrol` (`:578`). *Spawn* positions are kept ≥10 m from center
@@ -225,9 +226,19 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
 - **Fix direction:** exclude the prison footprint from the guard patrol (patrol a ring/donut outside the walls, or
   add a keep-out radius to the patrol waypoint selection in `A3E_fnc_Patrol`/the marker), and/or suppress the
   weapon-pickup escape trigger while a guard is inside the prison. Test with TS-006. _(User-reported; code-confirmed.)_
+- **Re-eval (2026-07-03, user-refined):** severity **medium-high → medium** — it's **annoying but not game-losing**;
+  it robs the **planning phase** (forces a rushed weapon-grab with no time to observe/plan). Timing varies: sometimes
+  a guard clips in within seconds (no time to reach weapons), sometimes after 10-20 s (players just watch and wait
+  for the clip-through). Recurring nearly every game. **Design intent from the user:** players want **guards to never
+  enter/clip into the prison during the captive phase**, and a **reasonable window to walk around, observe guards, and
+  plan** before *they* choose to trigger the escape. Guards **breaching *after* a player-triggered escape is fine**
+  ("on the players for not being prepared"). **Preferred fix:** confine the guard patrol to a **perimeter ring outside
+  the prison footprint** (no interior waypoints) — stops the clipping *and* preserves the planning window; leave
+  post-escape guard behavior unchanged. (Not the "suppress the trigger while a guard is inside" alternative — the user
+  wants guards simply kept out during the captive phase.)
 
-## BUG-031 — Spawn/init race can start the escape prematurely (candidate)
-- **Status:** open · **Severity:** medium · **candidate — matches user report of intermittent instant-fail on spawn**
+## BUG-031 — Spawn/init race can start the escape prematurely
+- **Status:** open · **Severity:** low-medium · **confirmed (playtest — JIP/reconnect timing race)**
 - **Repro / context:** The escape check (`fn_initServer.sqf:611-623`) starts the escape if an *initialized* player has
   `count weapons > 0` (`:617-618`). A joining player first spawns at the respawn point (map corner) **with their
   default loadout**, then the client strips gear (`fn_initLocalPlayer.sqf:23-33`). In parallel the server
@@ -242,30 +253,71 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
 - **Related UX:** the 'corner spawn visible before the screen goes black' — the intro/black-screen
   (`fn_initLocalPlayer.sqf:88+`, gated on `A3E_PlayerInitializedServer`) does not cover the initial
   spawn + gear-strip + teleport.
+- **Re-eval (2026-07-03, user-confirmed):** it's a **JIP/reconnect** timing race (server/client replication not
+  aligned, worse under lag); **extremely rare** at a synchronized mission-start. Observed variants: (a) teleported
+  **with gear still on**, which then strips; (b) **brief default loadout** then lost (the race window); (c) **rarely
+  the strip never completes** and the player keeps their **default loadout all game** — a *strip-failure*, not just a
+  race. The premature escape-start is when (b)/(c)'s default loadout hits the server escape check **before** the
+  escape has otherwise started. Kept **low-medium** (rare, JIP-specific).
+- **Fix (expanded):** gate `A3E_PlayerInitializedServer`/the escape check on the player being actually **unarmed at the
+  prison** (`waitUntil {count weapons _player == 0 && (_player distance A3E_StartPos) < 15}`), **and** harden the
+  **gear-strip for JIP/reconnect** (verify it completed + retry, or do an authoritative server-side strip) to cover
+  variant (c). Also cover the spawn+strip+teleport under the black screen. Test with TS-007.
 
 ## BUG-032 — `Functions.sqf` `_PopulateVehicle` soldier counter never increments
-- **Status:** open · **Severity:** medium · **confirmed**
+- **Status:** open · **Severity:** low-medium · **confirmed**
 - **Repro / context:** `Code/Scripts/Escape/Functions.sqf` — all four seat-fill loops (`:520,539,558,577`) contain
   `_soldierCount + _soldierCount + 1;` (a discarded expression) instead of `_soldierCount = _soldierCount + 1;`.
   `_soldierCount` starts at 0 (`:507`) and gates the `while` loops (`:511,530,549,568`) but is **never incremented**,
-  so the `_soldierCount <= _maxSoldiersCount` cap doesn't limit crew — the loops only stop on the seat-full
-  (`_continue`) fallthrough. Live code (reinforcement / populate-vehicle path used by `EscapeSurprises`).
+  so the `_soldierCount <= _maxSoldiersCount` cap (`:504` `_enemyFrequency+3+floor random(4*_enemyFrequency)`) is
+  always true — the loops stop only on the seat-full (`_continue=false`) fallthrough. Live code (reinforcement /
+  populate-vehicle path used by `EscapeSurprises`).
+- **Re-eval (2026-07-03):** driver/gunner/commander place **1 each regardless** (seat-limited), so the broken
+  counter only affects the **cargo** loop — it fills **every cargo seat** instead of stopping at `_maxSoldiersCount`.
+  **Scope correction:** `PopulateVehicle`'s **only caller is `CreateCivilEnemy`** (enemies in *civilian* vehicles) —
+  so *those* vehicles pack to **full cargo** instead of a frequency-scaled load. The reinforcement **trucks** are a
+  **separate, correctly-capped** path (`CreateReinforcementTruck.sqf:52-54` caps cargo at the vehicle's
+  `transportSoldier` capacity), so "reinforcement trucks almost always full" (user-observed at low/med freq) is that
+  cap *meeting* truck capacity, **not** this bug. Also 1 wasted createUnit+delete per role loop.
+- **Disposition:** **medium** (elevated) — fix `_soldierCount = _soldierCount + 1`. Beyond packing civil-enemy vehicles
+  full, the **missing numeric cap is the likely backstop-loss behind BUG-039** (rare unbounded AI overflow from a civilian
+  vehicle): with the counter broken, the cargo loop relies solely on `moveInCargo` failing, so a rare mis-detection
+  over-spawns with nothing to stop it. Restoring the counter caps it regardless.
 
-## BUG-033 — `EscapeSurprises` motorized-search re-fires immediately at max difficulty (candidate)
-- **Status:** open · **Severity:** low-medium · **candidate — verify**
+## BUG-033 — `EscapeSurprises` motorized-search re-schedule uses the wrong frequency multiplier
+- **Status:** open · **Severity:** high at max freq / low at low-med freq · **confirmed**
 - **Repro / context:** `Code/Scripts/Escape/EscapeSurprises.sqf:137` — the MOTORIZEDSEARCHGROUP in-loop re-schedule
-  uses `time + _timeInSek * (4 - _enemyFrequency)`, unlike every other branch's `time + _timeInSek * (0.5 + (4-freq)/4)`.
-  At `_enemyFrequency == 4` (max) this is `time + 0` → the surprise re-fires immediately (spam).
+  uses `time + _timeInSek * (4 - _enemyFrequency)`, unlike every other surprise's `time + _timeInSek * (0.5 + (4-freq)/4)`.
+- **Re-eval (2026-07-03):** the multiplier `(4-freq)` = 3/2/1/**0** for freq 1/2/3/4 (vs intended 1.25/1.0/0.75/0.5):
+  - **freq 4 (max):** `* 0` → `time + 0` → re-fires **every scheduler tick → SPAM** (endless motorized search groups; game-breaking at max difficulty).
+  - **freq 1-3:** delay is **2-2.4× longer than intended** at low freq → motorized search groups **rarer** than designed (subtle, not spam). At the user's **low/medium** freq this is the case → fewer motorized reinforcements than intended, likely unnoticed.
+- **Not intentional — smoking gun (2026-07-03):** the **initial** motorized-search schedule (`:76`) uses the
+  **standard** `(0.5 + (4-freq)/4)` formula, identical to every other surprise; only the **re-schedule** (`:137`)
+  deviates. If "slower" were intended, both would match — so this is a copy-paste/typo, and the `×0` (spam) at freq 4
+  is a degenerate no designer would choose.
+- **Actual vs intended timing** (base = 20-80 min): repeats at freq 1 = **60-240 min** (buggy) vs 25-100 (intended);
+  freq 2 = **40-160** vs 20-80; freq 3 = 20-80 vs 15-60; freq 4 = **0 / instant** vs 10-40. The *first* group is always
+  on the correct cadence; only **subsequent** ones are 2-2.4× too rare (low/med) or spammed (max). The user's one-time
+  **max-freq "slowly overrun"** experience is consistent with this spam contributing.
+- **Related timing note:** the `CIVILIANENEMY` surprise (`:93`) re-arms every ~1-2.5 min at low/med freq → `PopulateVehicle`
+  runs hundreds of times per long game, which explains BUG-039 recurring "≥3 times" despite being rare-per-roll.
+- **Disposition:** confirmed; **fix = the standard formula** `time + _timeInSek * (0.5 + (4-freq)/4)`. High priority *iff* max frequency is used (spam); otherwise low. Dormant-ish for the user (low/med).
 
-## BUG-034 — Extraction zone pools duplicate on repeated com-center hacks (candidate)
-- **Status:** open · **Severity:** low · **candidate — verify**
+## BUG-034 — Extraction zone pools duplicate on repeated com-center hacks
+- **Status:** open · **Severity:** low · **harmless (SQF reference semantics) — confirmed by playtest**
 - **Repro / context:** `Code/functions/Server/fn_SelectExtractionZone.sqf`. Marker *discovery* is `isNil`-cached
   (`:25-45`), but the pool-*assembly* appends (`:54-64`, `A3E_ExtractionPositions append …`) are **not** guarded and
-  run on every call. Each successful hack (one per com-center) re-appends the `air`/`land`/`sea`/`old` positions, so
-  `A3E_ExtractionPositions` accumulates duplicate zone records across a multi-comcenter mission.
-- **Notes:** Partly masked by the per-record `used` flag (`set[3,true]`) + the clear filter, but it biases random
-  selection toward duplicated zones. Fix: build the assembled list once (guard it) or de-dup. Surfaced by the
-  integration extraction trace ([subsystem-extraction.md](../docs/architecture/subsystem-extraction.md) Stage 3).
+  run on every call, so each hack re-appends the `air`/`land`/`sea`/`old` positions into `A3E_ExtractionPositions`.
+- **Re-eval (2026-07-03, user-confirmed):** the duplication is **harmless** because SQF arrays are **by reference** —
+  the appended duplicates are the **same record objects**, not copies. So (a) marking a zone used
+  (`_extraction set [3,true]`) **propagates to all its duplicate entries** → a used zone is **never re-offered** (the
+  `!(_x select 3)` filter excludes every copy); and (b) each *unused* zone is duplicated the **same** number of times
+  → `selectRandom` stays **unbiased**. Multiple hacks are **common** in the user's group (untenable/destroyed evacs)
+  and **always yield a new unique evac** — confirming this. It's guaranteed by the shared reference, not statistics.
+  (The earlier "biased selection / re-offered used zone" prediction was wrong — it ignored reference semantics.)
+- **Disposition:** low — only real cost is `A3E_ExtractionPositions` growing by pool-size each hack (negligible
+  memory). Guard the append (build the pool once) for cleanliness. Surfaced by the integration extraction trace
+  ([subsystem-extraction.md](../docs/architecture/subsystem-extraction.md) Stage 3).
 
 ## BUG-035 — Extraction board-wait loop is unbounded (can stall evac) (candidate)
 - **Status:** open · **Severity:** medium · **candidate — verify**
@@ -321,6 +373,39 @@ _Last updated: 2026-07-02 (local)_ · _Status: active_
 - **Player effect (user-reported 2026-07-03):** the yellow "Hack terminal" UI often takes real effort to appear — players report having to **wait**, or carefully **aim/look at a specific spot** on the terminal, before the action shows. Friction on a **core** action (hacking a com-center is what triggers extraction, BUG-012 / extraction subsystem).
 - **Fix direction:** replace the finicky `cursorObject` gate with a more forgiving detection — e.g. `nearestObjects [player,[],3]` filtered to `A3E_isTerminal` within a forward cone, or attach the action **to the terminal object** (addAction on the terminal with a radius) instead of a player action gated on cursorObject, or an ACE-interact point. _(Terminal-interaction review.)_
 
+## BUG-039 — Rare: enemy AI pour endlessly from a vehicle until it is destroyed
+- **Status:** open · **Severity:** high (when it occurs) · **candidate — rare; root cause not yet isolated**
+- **Repro / context (user-reported 2026-07-03):** in **extremely rare** situations, enemy AI **continuously exit a
+  particular vehicle** — more AI than its seats — as if the vehicle has infinite cargo slots or is being re-populated
+  while units disembark; it only stops when the **vehicle is destroyed**.
+- **Narrowed (user 2026-07-03):** it's specifically the **civilian-vehicle "recon drop-off"** (`CreateCivilEnemy` →
+  `Scripts\Escape\CivilEnemy.sqf`), e.g. a civ box truck / repair van; the vehicle drives up and offloads cargo AI.
+- **Root-cause hypothesis:** `CivilEnemy.sqf` disembarks the group **once** — no wave/re-populate loop (the "moving
+  out" tail is commented out, `:118-171`). So the absurd count is created at **population time** by
+  `drn_fnc_Escape_PopulateVehicle`. Because **BUG-032** breaks the `_soldierCount` cap, that cargo loop's *only*
+  stop condition is `moveInCargo` failing on a full vehicle. In rare cases (engine timing / an odd civilian-vehicle
+  cargo config) the "full" detection doesn't trip reliably → with **no numeric backstop** the loop crams in an absurd
+  number of units. At the drop-off they pour out slowly ("continuous"); destroying the vehicle kills the remainder
+  (→ "until destroyed"). Fits: civilian vehicle, recon AI, rare, more-than-seats.
+- **Fix:** **restore the BUG-032 counter** (`_soldierCount = _soldierCount + 1`) so `_maxSoldiersCount` is a hard cap
+  regardless of `moveInCargo` behavior — bounds the overflow directly. Elevates BUG-032's priority.
+- **Verify:** debug-log unit creation in `PopulateVehicle` (count per vehicle) to catch an over-count when it recurs.
+  _(The `fn_InsertionTruck.sqf:159-168` unload-wait hang on a stuck dead cargo unit is a **separate** reinforcement-truck
+  defect — worth fixing, but not this civilian path.)_
+
+## BUG-040 — `RoadBlocks` reads `_roadConnectedTo select 1` guarded only against 0 connections
+- **Status:** open · **Severity:** low-medium · **confirmed (external review; source-verified)**
+- **Repro / context:** `Code/functions/Server/fn_RoadBlocks.sqf:26-32` — `_roadConnectedTo = roadsConnectedTo _roadSegment`
+  is guarded only for `count == 0` (`:28`), but `:32` then reads **both** `_roadConnectedTo select 0` **and**
+  `select 1` for `BIS_fnc_DirTo`. On a **dead-end / single-connection road segment** (`count == 1`), `select 1` is
+  out of bounds → script error / nil → `_dir` is bad → the roadblock is **skipped or spawns mis-rotated** (compounds
+  BUG-029). Dead-end stubs (cul-de-sacs, road ends near map edges) are common enough to hit occasionally; roadblocks
+  retry, so the impact is a skipped/degraded roadblock, not a crash.
+- **Fix:** guard `if (count _roadConnectedTo < 2) exitWith {["RoadSegment has < 2 connections. Skipping.",["Roadblocks"]] call A3E_fnc_Log;};` before `:32`.
+- **Source:** external AI reviews (Copilot **A-002** / Antigravity), source-verified 2026-07-03 — the one genuinely new
+  bug from those reviews not already covered by the re-evaluation. _(Their files suggested "BUG-036" for this, but that
+  ID is the garrison-clustering bug — assigned BUG-040 here.)_
+
 ---
 
 _Format for new entries:_
@@ -369,3 +454,10 @@ _Format for new entries:_
 | 2026-07-03 | Claude | Re-eval: BUG-023 CLOSED false positive (precedence correct); added RD-038 (triplicated report logic). FR-001 + docs/stats-backend.md from BUG-022 follow-up |
 | 2026-07-03 | Claude | Re-eval: BUG-024 low/latent (dead line 86; consumer unreachable); BUG-025 med→low (failsafe never reached — ~1000 plays); BUG-026 low/latent (called-once global mutation) |
 | 2026-07-03 | Claude | Re-eval: BUG-027 low (all three latent/redundant/server-invisible DRN cleanups) |
+| 2026-07-03 | Claude | Re-eval: BUG-029 code-confirmed (rotation = road heading → manned slots misaligned on ~every roadblock); added TS-014, needs playtest |
+| 2026-07-03 | Claude | Re-eval: BUG-032 (scope = CreateCivilEnemy; trucks separately capped). Added BUG-039 (rare infinite-AI from civilian recon drop-off); narrowed to CivilEnemy→PopulateVehicle and linked to BUG-032's missing cap → BUG-032 elevated to medium |
+| 2026-07-03 | Claude | Re-eval: BUG-033 confirmed (wrong re-schedule multiplier — initial-vs-repeat mismatch proves bug; spam at max, rarer at low/med) |
+| 2026-07-03 | Claude | Re-eval: BUG-034 low/harmless (SQF by-reference → used-flag propagates to duplicates → never re-offers a used evac; user-confirmed always-unique) |
+| 2026-07-03 | Claude | Re-eval: BUG-030 med-high→med (annoying not game-losing); refined fix = perimeter-ring patrol (guards out during captive phase; post-escape breaching OK) |
+| 2026-07-03 | Claude | Re-eval: BUG-031 candidate→confirmed (JIP/reconnect race; +strip-failure variant c). Added FR-002 (prison LOS integrity — no seeing/shooting through walls) |
+| 2026-07-03 | Claude | Reviewed external AI findings (Copilot + Antigravity): agreed on BUG-016/023; most already superseded by re-eval. Added BUG-040 (RoadBlocks select 1 OOB on dead-end segments — the one genuinely new finding) |
