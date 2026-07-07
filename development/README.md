@@ -46,6 +46,7 @@ asked to build/port code, work in the production tree — do not turn these plan
 - [docs/project-template.md](docs/project-template.md) — the reusable blueprint these docs follow (project-agnostic).
 
 ### trackers/ — living lists
+- [trackers/fix-priority.md](trackers/fix-priority.md) — **prioritized fix list / roadmap** (index of all bugs/FRs/tech-debt by impact + effort). Start here.
 - [trackers/feature-requests.md](trackers/feature-requests.md) — `FR-NNN`
 - [trackers/bugs-app.md](trackers/bugs-app.md) — `BUG-NNN`
 - [trackers/bugs-tests.md](trackers/bugs-tests.md) — `TBUG-NNN`
